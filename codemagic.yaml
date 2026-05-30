@@ -24,6 +24,14 @@ workflows:
       - name: Sync Capacitor plugins to iOS
         script: npx cap sync ios
 
+      - name: Install CocoaPods dependencies
+        script: |
+          cd ios/App
+          pod install
+
+      - name: Show iOS folder structure
+        script: find ios -name "*.xcworkspace" -o -name "*.xcodeproj" | head -20
+
       - name: Set up keychain and code signing
         script: |
           keychain initialize
@@ -35,8 +43,10 @@ workflows:
 
       - name: Build .ipa
         script: |
+          WORKSPACE=$(find ios -name "*.xcworkspace" | head -1)
+          echo "Using workspace: $WORKSPACE"
           xcode-project build-ipa \
-            --workspace ios/App/App.xcworkspace \
+            --workspace "$WORKSPACE" \
             --scheme App \
             --config Release
 
