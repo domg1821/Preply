@@ -24,11 +24,6 @@ workflows:
       - name: Sync Capacitor plugins to iOS
         script: npx cap sync ios
 
-      - name: Install CocoaPods dependencies
-        script: |
-          cd ios/App
-          pod install
-
       - name: Show iOS folder structure
         script: find ios -name "*.xcworkspace" -o -name "*.xcodeproj" | head -20
 
