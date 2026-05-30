@@ -24,9 +24,6 @@ workflows:
       - name: Sync Capacitor plugins to iOS
         script: npx cap sync ios
 
-      - name: Show iOS folder structure
-        script: find ios -name "*.xcworkspace" -o -name "*.xcodeproj" | head -20
-
       - name: Set up keychain and code signing
         script: |
           keychain initialize
@@ -38,12 +35,20 @@ workflows:
 
       - name: Build .ipa
         script: |
-          WORKSPACE=$(find ios -name "*.xcworkspace" | head -1)
+          WORKSPACE=$(find ios -name "*.xcworkspace" | grep -v "xcodeproj" | head -1)
+          if [ -z "$WORKSPACE" ]; then
+            WORKSPACE=$(find ios -name "*.xcworkspace" | head -1)
+          fi
           echo "Using workspace: $WORKSPACE"
+
+          PROFILE_UUID=$(find ~/Library/MobileDevice/Provisioning\ Profiles -name "*.mobileprovision" | head -1 | xargs -I{} /usr/libexec/PlistBuddy -c "Print UUID" /dev/stdin 2>/dev/null || security cms -D -i ~/Library/MobileDevice/Provisioning\ Profiles/*.mobileprovision 2>/dev/null | plutil -extract UUID raw - 2>/dev/null | head -1)
+          echo "Profile UUID: $PROFILE_UUID"
+
           xcode-project build-ipa \
             --workspace "$WORKSPACE" \
             --scheme App \
-            --config Release
+            --config Release \
+            --archive-xcargs "CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM=$APPLE_TEAM_ID PROVISIONING_PROFILE_SPECIFIER=$BUNDLE_ID CODE_SIGN_IDENTITY='iPhone Distribution'"
 
     artifacts:
       - build/ios/ipa/*.ipa
