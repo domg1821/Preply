@@ -4,14 +4,16 @@ workflows:
     max_build_duration: 60
     environment:
       groups:
-        - app_store_credentials   # APP_STORE_CONNECT_ISSUER_ID, APP_STORE_CONNECT_KEY_IDENTIFIER, APP_STORE_CONNECT_PRIVATE_KEY, CERTIFICATE_PRIVATE_KEY
-        - preply_secrets          # your app env vars (see Step 5)
-      node: v20.17.0
+        - app_store_credentials
+        - preply_secrets
+      node: v22
       xcode: latest
       cocoapods: default
     scripts:
       - name: Install Node dependencies
-        script: npm install
+        script: |
+          npm install
+          npm install -g @capacitor/cli
 
       - name: Create iOS project if it doesn't exist
         script: |
@@ -53,5 +55,5 @@ workflows:
         api_key: $APP_STORE_CONNECT_PRIVATE_KEY
         key_id: $APP_STORE_CONNECT_KEY_IDENTIFIER
         issuer_id: $APP_STORE_CONNECT_ISSUER_ID
-        submit_to_testflight: true   # change to false if you want to approve manually first
-        submit_to_app_store: false   # set true when you're ready for full release
+        submit_to_testflight: true
+        submit_to_app_store: false
