@@ -33,6 +33,11 @@ workflows:
           keychain add-certificates
           xcode-project use-profiles
 
+      - name: List provisioning profiles
+        script: |
+          ls ~/Library/MobileDevice/Provisioning\ Profiles/ || echo "No profiles folder"
+          security find-identity -v -p codesigning || echo "No identities"
+
       - name: Build .ipa
         script: |
           WORKSPACE=$(find ios -name "*.xcworkspace" | grep -v "xcodeproj" | head -1)
@@ -41,14 +46,17 @@ workflows:
           fi
           echo "Using workspace: $WORKSPACE"
 
-          PROFILE_UUID=$(find ~/Library/MobileDevice/Provisioning\ Profiles -name "*.mobileprovision" | head -1 | xargs -I{} /usr/libexec/PlistBuddy -c "Print UUID" /dev/stdin 2>/dev/null || security cms -D -i ~/Library/MobileDevice/Provisioning\ Profiles/*.mobileprovision 2>/dev/null | plutil -extract UUID raw - 2>/dev/null | head -1)
-          echo "Profile UUID: $PROFILE_UUID"
-
-          xcode-project build-ipa \
-            --workspace "$WORKSPACE" \
-            --scheme App \
-            --config Release \
-            --archive-xcargs "CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM=$APPLE_TEAM_ID PROVISIONING_PROFILE_SPECIFIER=$BUNDLE_ID CODE_SIGN_IDENTITY='iPhone Distribution'"
+          xcodebuild \
+            -workspace "$WORKSPACE" \
+            -scheme App \
+            -config Release \
+            -archivePath build/ios/xcarchive/App.xcarchive \
+            archive \
+            CODE_SIGN_STYLE=Manual \
+            DEVELOPMENT_TEAM="$APPLE_TEAM_ID" \
+            CODE_SIGN_IDENTITY="iPhone Distribution" \
+            PROVISIONING_PROFILE_SPECIFIER="$BUNDLE_ID" \
+            | tail -50
 
     artifacts:
       - build/ios/ipa/*.ipa
