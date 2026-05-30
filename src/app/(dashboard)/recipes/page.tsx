@@ -1,8 +1,9 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, Search, Clock, Flame, Beef, Wheat, Droplets, ShoppingCart, Trash2 } from 'lucide-react';
+import { Plus, Search, Clock, Flame, Beef, Wheat, Droplets, ShoppingCart, Trash2, Download } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
+import { ConfirmModal } from '@/components/ui/ConfirmModal';
 import { RecipeCard } from '@/components/recipes/RecipeCard';
 import { RecipeBuilder } from '@/components/recipes/RecipeBuilder';
 import { Recipe } from '@/types';
@@ -14,6 +15,9 @@ export default function RecipesPage() {
   const [showBuilder, setShowBuilder] = useState(false);
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [seeding, setSeeding] = useState(false);
+  const [seedResult, setSeedResult] = useState<{ added: number; skipped: number } | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   const fetchRecipes = useCallback(async () => {
     setLoading(true);
@@ -43,8 +47,29 @@ export default function RecipesPage() {
   }
 
   async function handleDelete(id: string) {
-    await fetch(`/api/recipes/${id}`, { method: 'DELETE' });
-    setRecipes((prev) => prev.filter((r) => r.id !== id));
+    setConfirmDeleteId(id);
+  }
+
+  async function confirmDelete() {
+    if (!confirmDeleteId) return;
+    await fetch(`/api/recipes/${confirmDeleteId}`, { method: 'DELETE' });
+    setRecipes((prev) => prev.filter((r) => r.id !== confirmDeleteId));
+    setConfirmDeleteId(null);
+  }
+
+  async function handleSeedTemplates() {
+    setSeeding(true);
+    setSeedResult(null);
+    try {
+      const res = await fetch('/api/recipes/seed', { method: 'POST' });
+      const data = await res.json();
+      setSeedResult(data);
+      if (data.added > 0) fetchRecipes();
+    } catch {
+      setSeedResult({ added: 0, skipped: 0 });
+    } finally {
+      setSeeding(false);
+    }
   }
 
   return (
@@ -54,11 +79,30 @@ export default function RecipesPage() {
           <h1 className="text-2xl font-bold text-[var(--text)]">Recipes</h1>
           <p className="text-sm text-[var(--text-muted)] mt-0.5">{recipes.length} recipe{recipes.length !== 1 ? 's' : ''} saved</p>
         </div>
-        <Button onClick={() => setShowBuilder(true)}>
-          <Plus size={16} />
-          New Recipe
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="secondary" onClick={handleSeedTemplates} loading={seeding}>
+            <Download size={15} />
+            {seeding ? 'Loading…' : 'Browse Recipe Library'}
+          </Button>
+          <Button onClick={() => setShowBuilder(true)}>
+            <Plus size={16} />
+            New Recipe
+          </Button>
+        </div>
       </div>
+
+      {seedResult && (
+        <div className={`mb-4 flex items-center gap-2 px-4 py-3 rounded-xl text-sm font-medium ${
+          seedResult.added > 0
+            ? 'bg-[var(--primary)]/10 border border-[var(--primary)]/20 text-[var(--primary)]'
+            : 'bg-[var(--surface)] border border-[var(--border)] text-[var(--text-muted)]'
+        }`}>
+          {seedResult.added > 0
+            ? `✓ Added ${seedResult.added} starter meal${seedResult.added !== 1 ? 's' : ''} to your library!`
+            : `All starter meals are already in your library (${seedResult.skipped} skipped).`}
+          <button className="ml-auto text-xs opacity-60 hover:opacity-100" onClick={() => setSeedResult(null)}>✕</button>
+        </div>
+      )}
 
       <div className="relative mb-6">
         <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
@@ -94,12 +138,12 @@ export default function RecipesPage() {
         </div>
       ) : (
         <div className="space-y-8">
-          {/* Recent recipes — full breakdown, no search filter */}
+          {/* Recent recipes — full row breakdown, only shown when not searching */}
           {!search && recipes.length > 0 && (
             <div>
               <div className="flex items-center gap-2 mb-3">
                 <Clock size={14} className="text-[var(--text-muted)]" />
-                <h2 className="text-sm font-semibold text-[var(--text-muted)] uppercase tracking-wider">Recent Recipes</h2>
+                <h2 className="text-sm font-semibold text-[var(--text-muted)] uppercase tracking-wider">Recently Added</h2>
               </div>
               <div className="flex flex-col gap-3">
                 {recipes.slice(0, 3).map((recipe) => (
@@ -109,17 +153,19 @@ export default function RecipesPage() {
             </div>
           )}
 
-          {/* Full library grid */}
-          <div>
-            {!search && recipes.length > 0 && (
-              <h2 className="text-sm font-semibold text-[var(--text-muted)] uppercase tracking-wider mb-3">All Recipes</h2>
-            )}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filtered.map((recipe) => (
-                <RecipeCard key={recipe.id} recipe={recipe} onDelete={handleDelete} />
-              ))}
+          {/* Full library grid — when not searching, skip the first 3 already shown above */}
+          {(search || recipes.length > 3) && (
+            <div>
+              {!search && recipes.length > 3 && (
+                <h2 className="text-sm font-semibold text-[var(--text-muted)] uppercase tracking-wider mb-3">All Recipes</h2>
+              )}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {(search ? filtered : filtered.slice(3)).map((recipe) => (
+                  <RecipeCard key={recipe.id} recipe={recipe} onDelete={handleDelete} />
+                ))}
+              </div>
             </div>
-          </div>
+          )}
         </div>
       )}
 
@@ -130,6 +176,16 @@ export default function RecipesPage() {
           saving={saving}
         />
       </Modal>
+
+      <ConfirmModal
+        open={!!confirmDeleteId}
+        title="Delete recipe?"
+        message="This will permanently remove the recipe and cannot be undone."
+        confirmLabel="Delete"
+        danger
+        onConfirm={confirmDelete}
+        onCancel={() => setConfirmDeleteId(null)}
+      />
     </div>
   );
 }

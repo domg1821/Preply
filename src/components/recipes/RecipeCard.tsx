@@ -1,9 +1,10 @@
 'use client';
 import { useState } from 'react';
-import { BookOpen, Trash2, Users, Star, ChevronDown } from 'lucide-react';
+import { BookOpen, Trash2, Users, Star, ChevronDown, Clock, Flame, ChefHat } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
 import { calcRecipeMacros, roundMacro } from '@/lib/utils';
 import { Recipe } from '@/types';
+import { CookModeModal } from './CookModeModal';
 
 interface Props {
   recipe: Recipe;
@@ -16,7 +17,9 @@ export function RecipeCard({ recipe, onDelete, onClick, onFavoriteToggle }: Prop
   const [favorite, setFavorite] = useState(recipe.is_favorite ?? false);
   const [favLoading, setFavLoading] = useState(false);
   const [showIngredients, setShowIngredients] = useState(false);
+  const [showCookMode, setShowCookMode] = useState(false);
   const macros = calcRecipeMacros(recipe.ingredients, 1);
+  const totalTime = (recipe.prep_time ?? 0) + (recipe.cook_time ?? 0);
 
   async function toggleFavorite(e: React.MouseEvent) {
     e.stopPropagation();
@@ -34,6 +37,7 @@ export function RecipeCard({ recipe, onDelete, onClick, onFavoriteToggle }: Prop
   }
 
   return (
+    <>
     <div
       onClick={() => onClick?.(recipe)}
       className="rounded-2xl bg-[var(--surface)] border border-[var(--border)] p-5 hover:border-[var(--border-2)] transition-all duration-200 cursor-pointer group"
@@ -60,21 +64,21 @@ export function RecipeCard({ recipe, onDelete, onClick, onFavoriteToggle }: Prop
         <div className="flex items-center gap-0.5">
           <button
             onClick={toggleFavorite}
-            className={`p-1.5 rounded-lg transition-all ${
+            className={`p-2.5 rounded-xl transition-all ${
               favorite
-                ? 'text-amber-400 opacity-100'
-                : 'opacity-0 group-hover:opacity-100 text-[var(--text-muted)] hover:text-amber-400 hover:bg-amber-500/10'
+                ? 'text-amber-400'
+                : 'text-[var(--text-muted)] hover:text-amber-400 hover:bg-amber-500/10 md:opacity-0 md:group-hover:opacity-100'
             }`}
             title={favorite ? 'Remove from favourites' : 'Add to favourites'}
           >
-            <Star size={15} fill={favorite ? 'currentColor' : 'none'} />
+            <Star size={16} fill={favorite ? 'currentColor' : 'none'} />
           </button>
           {onDelete && (
             <button
               onClick={(e) => { e.stopPropagation(); onDelete(recipe.id); }}
-              className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg text-[var(--text-muted)] hover:text-red-400 hover:bg-red-500/10 transition-all"
+              className="p-2.5 rounded-xl text-[var(--text-muted)] hover:text-red-400 hover:bg-red-500/10 transition-all md:opacity-0 md:group-hover:opacity-100"
             >
-              <Trash2 size={15} />
+              <Trash2 size={16} />
             </button>
           )}
         </div>
@@ -98,6 +102,47 @@ export function RecipeCard({ recipe, onDelete, onClick, onFavoriteToggle }: Prop
           </div>
         ))}
       </div>
+
+      {/* Time + Cook Mode row */}
+      {(totalTime > 0 || (recipe.steps && recipe.steps.length > 0)) && (
+        <div className="flex items-center justify-between mb-3 pt-1">
+          <div className="flex items-center gap-3 text-xs text-[var(--text-muted)]">
+            {recipe.prep_time ? (
+              <span className="flex items-center gap-1">
+                <Clock size={11} /> {recipe.prep_time}m prep
+              </span>
+            ) : null}
+            {recipe.cook_time ? (
+              <span className="flex items-center gap-1">
+                <Flame size={11} className="text-orange-400" /> {recipe.cook_time}m cook
+              </span>
+            ) : null}
+            {totalTime > 0 && (
+              <span className="font-semibold text-[var(--text)]">{totalTime}m total</span>
+            )}
+          </div>
+          <button
+            onClick={(e) => { e.stopPropagation(); setShowCookMode(true); }}
+            className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg transition-all hover:opacity-90 active:scale-95"
+            style={{ background: 'linear-gradient(135deg, var(--primary), #059669)', color: '#fff' }}
+          >
+            <ChefHat size={12} />
+            Cook Mode
+          </button>
+        </div>
+      )}
+
+      {!(totalTime > 0 || (recipe.steps && recipe.steps.length > 0)) && (
+        <div className="flex justify-end mb-3">
+          <button
+            onClick={(e) => { e.stopPropagation(); setShowCookMode(true); }}
+            className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--text)] hover:border-[var(--border-2)] transition-all"
+          >
+            <ChefHat size={12} />
+            Cook Mode
+          </button>
+        </div>
+      )}
 
       {recipe.tags && recipe.tags.length > 0 && (
         <div className="flex flex-wrap gap-1.5 mb-3">
@@ -135,5 +180,13 @@ export function RecipeCard({ recipe, onDelete, onClick, onFavoriteToggle }: Prop
         </>
       )}
     </div>
+
+    {showCookMode && (
+      <CookModeModal
+        recipe={recipe}
+        onClose={() => setShowCookMode(false)}
+      />
+    )}
+  </>
   );
 }

@@ -24,11 +24,18 @@ export async function POST(req: NextRequest) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const body = await req.json();
-  const { name, description, default_servings, tags, ingredients } = body;
+  const { name, description, default_servings, tags, ingredients, steps, prep_time, cook_time } = body;
 
   const { data: recipe, error: recipeError } = await supabase
     .from('recipes')
-    .insert({ user_id: user.id, name, description, default_servings: default_servings ?? 1, tags })
+    .insert({
+      user_id: user.id, name, description,
+      default_servings: default_servings ?? 1,
+      tags,
+      steps: steps ?? [],
+      prep_time: prep_time ?? null,
+      cook_time: cook_time ?? null,
+    })
     .select()
     .single();
 

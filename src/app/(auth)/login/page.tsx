@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { ChefHat, Mail } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
+import { getAppUrl } from '@/lib/capacitor';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 
@@ -60,7 +61,7 @@ function LoginForm() {
     await supabase.auth.resend({
       type: 'signup',
       email,
-      options: { emailRedirectTo: `${window.location.origin}/api/auth/callback` },
+      options: { emailRedirectTo: `${getAppUrl()}/api/auth/callback` },
     });
     setResendLoading(false);
     setResendSent(true);
@@ -114,26 +115,40 @@ function LoginForm() {
 export default function LoginPage() {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-[var(--bg)]">
-      <div className="w-full max-w-sm">
-        <div className="flex justify-center mb-8">
-          <div className="w-12 h-12 rounded-2xl bg-[var(--primary)] flex items-center justify-center shadow-lg shadow-emerald-900/40">
-            <ChefHat size={24} className="text-white" />
+      {/* Subtle glow */}
+      <div className="fixed top-0 left-1/2 -translate-x-1/2 w-96 h-64 pointer-events-none"
+        style={{ background: 'radial-gradient(circle, rgba(16,185,129,0.06) 0%, transparent 70%)' }} />
+
+      <div className="relative w-full max-w-sm">
+        {/* Card */}
+        <div className="rounded-2xl border border-[var(--border)] overflow-hidden"
+          style={{ background: 'var(--surface)' }}>
+          {/* Top accent */}
+          <div className="h-1 w-full" style={{ background: 'linear-gradient(90deg, #10B981, #059669)' }} />
+
+          <div className="p-8">
+            <div className="flex justify-center mb-6">
+              <div className="w-12 h-12 rounded-2xl flex items-center justify-center glow-primary"
+                style={{ background: 'linear-gradient(135deg, #10B981, #059669)' }}>
+                <ChefHat size={22} className="text-white" />
+              </div>
+            </div>
+
+            <h1 className="text-2xl font-bold text-center mb-1">Welcome back</h1>
+            <p className="text-sm text-[var(--text-muted)] text-center mb-7">Sign in to your Preply account</p>
+
+            <Suspense fallback={<div className="h-48 animate-pulse rounded-xl bg-[var(--surface-2)]" />}>
+              <LoginForm />
+            </Suspense>
+
+            <p className="text-sm text-center text-[var(--text-muted)] mt-6">
+              Don&apos;t have an account?{' '}
+              <Link href="/signup" className="text-[var(--primary)] hover:text-[var(--primary-light)] transition-colors font-medium">
+                Sign up free
+              </Link>
+            </p>
           </div>
         </div>
-
-        <h1 className="text-2xl font-bold text-center mb-1">Welcome back</h1>
-        <p className="text-sm text-[var(--text-muted)] text-center mb-8">Sign in to your Preply account</p>
-
-        <Suspense fallback={<div className="h-48 animate-pulse rounded-xl bg-[var(--surface)]" />}>
-          <LoginForm />
-        </Suspense>
-
-        <p className="text-sm text-center text-[var(--text-muted)] mt-6">
-          Don&apos;t have an account?{' '}
-          <Link href="/signup" className="text-[var(--primary)] hover:text-[var(--primary-light)] transition-colors font-medium">
-            Sign up free
-          </Link>
-        </p>
       </div>
     </div>
   );

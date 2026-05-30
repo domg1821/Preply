@@ -32,6 +32,9 @@ export interface Recipe {
   image_url?: string;
   tags?: string[];
   ingredients: Ingredient[];
+  steps?: string[];
+  prep_time?: number;  // minutes
+  cook_time?: number;  // minutes
   is_favorite?: boolean;
   created_at: string;
   updated_at: string;

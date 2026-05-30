@@ -1,13 +1,12 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
 import { format } from 'date-fns';
-import { CalendarDays, ChevronRight, Plus, Flame, Beef, Wheat, ShoppingCart, BookOpen, BarChart3 } from 'lucide-react';
+import { CalendarDays, ChevronRight, Plus, ShoppingCart, BookOpen, Crown, Flame, Beef, Wheat, Droplets } from 'lucide-react';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
-import { MacroRing } from '@/components/dashboard/MacroRing';
 import { OnboardingModal } from '@/components/onboarding/OnboardingModal';
 import { MealPlanEntry, Profile } from '@/types';
-import { calcRecipeMacros, getMondayOfWeek, getWeekDates, formatDate } from '@/lib/utils';
+import { getMondayOfWeek, getWeekDates, formatDate, calcRecipeMacros } from '@/lib/utils';
 
 const MEAL_ORDER = ['breakfast', 'lunch', 'dinner', 'snack'] as const;
 
@@ -176,22 +175,6 @@ export default function HomePage() {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  // Calculate today's macro totals
-  const totalMacros = meals.reduce(
-    (acc, entry) => {
-      if (!entry.recipe) return acc;
-      const m = calcRecipeMacros(entry.recipe.ingredients, entry.servings);
-      return {
-        calories: acc.calories + m.calories,
-        protein: acc.protein + m.protein,
-        carbs: acc.carbs + m.carbs,
-        fat: acc.fat + m.fat,
-      };
-    },
-    { calories: 0, protein: 0, carbs: 0, fat: 0 }
-  );
-
-  const goals = profile?.macro_goals ?? { calories: 2000, protein: 150, carbs: 200, fat: 65 };
   const firstName = profile?.full_name?.split(' ')[0] ?? '';
 
   const mealsByType = MEAL_ORDER.reduce<Record<string, MealPlanEntry[]>>((acc, type) => {
@@ -244,81 +227,10 @@ export default function HomePage() {
           </Link>
         </div>
 
-        {/* Macro rings */}
-        <div className="rounded-2xl border border-[var(--border)] p-4"
-          style={{ background: 'var(--surface)' }}>
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <Flame size={15} className="text-amber-400" />
-              <span className="text-sm font-semibold text-[var(--text)]">Nutrition Today</span>
-            </div>
-            <span className="text-xs text-[var(--text-muted)]">
-              {Math.round(totalMacros.calories)} / {goals.calories} kcal
-            </span>
-          </div>
-          <div className="grid grid-cols-4 gap-2">
-            <MacroRing
-              value={totalMacros.calories}
-              goal={goals.calories}
-              color="#F59E0B"
-              label="Calories"
-              unit="kcal"
-              size={82}
-              strokeWidth={6}
-            />
-            <MacroRing
-              value={totalMacros.protein}
-              goal={goals.protein ?? 150}
-              color="#10B981"
-              label="Protein"
-              unit="g"
-              size={82}
-              strokeWidth={6}
-            />
-            <MacroRing
-              value={totalMacros.carbs}
-              goal={goals.carbs ?? 200}
-              color="#60A5FA"
-              label="Carbs"
-              unit="g"
-              size={82}
-              strokeWidth={6}
-            />
-            <MacroRing
-              value={totalMacros.fat}
-              goal={goals.fat ?? 65}
-              color="#A78BFA"
-              label="Fat"
-              unit="g"
-              size={82}
-              strokeWidth={6}
-            />
-          </div>
-
-          {/* Calorie progress bar */}
-          <div className="mt-4">
-            <div className="h-1.5 w-full rounded-full bg-[var(--border-2)] overflow-hidden">
-              <div
-                className="h-full rounded-full transition-all duration-700"
-                style={{
-                  width: `${Math.min((totalMacros.calories / goals.calories) * 100, 100)}%`,
-                  background: totalMacros.calories > goals.calories
-                    ? '#EF4444'
-                    : 'linear-gradient(90deg, #10B981, #F59E0B)',
-                }}
-              />
-            </div>
-            <div className="flex justify-between text-[11px] text-[var(--text-muted)] mt-1">
-              <span>{Math.round(goals.calories - totalMacros.calories > 0 ? goals.calories - totalMacros.calories : 0)} kcal remaining</span>
-              <span>{Math.round((totalMacros.calories / goals.calories) * 100)}%</span>
-            </div>
-          </div>
-        </div>
-
         {/* Today's meals */}
-        <div className="rounded-2xl border border-[var(--border)] p-4"
+        <div className="rounded-2xl border border-[var(--border)] overflow-hidden"
           style={{ background: 'var(--surface)' }}>
-          <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center justify-between px-4 pt-4 pb-3">
             <span className="text-sm font-semibold text-[var(--text)]">Meals Today</span>
             <Link
               href="/calendar"
@@ -330,7 +242,11 @@ export default function HomePage() {
           </div>
 
           {meals.length === 0 ? (
-            <div className="flex flex-col items-center py-6 gap-2 text-center">
+            <div className="flex flex-col items-center py-8 gap-2 text-center px-4 pb-4">
+              <div className="w-12 h-12 rounded-2xl flex items-center justify-center mb-1"
+                style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
+                <CalendarDays size={20} className="text-[var(--text-muted)]" />
+              </div>
               <p className="text-sm text-[var(--text-muted)]">Nothing planned yet.</p>
               <Link
                 href="/calendar"
@@ -340,52 +256,72 @@ export default function HomePage() {
               </Link>
             </div>
           ) : (
-            <div className="space-y-1">
-              {MEAL_ORDER.map((type) => {
-                const typeMeals = mealsByType[type];
-                if (typeMeals.length === 0) return null;
+            <>
+              {/* Macro summary bar */}
+              {(() => {
+                const totals = meals.reduce((acc, entry) => {
+                  if (!entry.recipe) return acc;
+                  const m = calcRecipeMacros(entry.recipe.ingredients, entry.servings);
+                  return {
+                    calories: acc.calories + m.calories,
+                    protein: acc.protein + m.protein,
+                    carbs: acc.carbs + m.carbs,
+                    fat: acc.fat + m.fat,
+                  };
+                }, { calories: 0, protein: 0, carbs: 0, fat: 0 });
                 return (
-                  <div key={type}>
-                    <div className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold mb-1 ${MEAL_COLORS[type]}`}>
-                      {MEAL_LABELS[type]}
-                    </div>
-                    {typeMeals.map((entry) => {
-                      const m = entry.recipe ? calcRecipeMacros(entry.recipe.ingredients, entry.servings) : null;
-                      return (
+                  <div className="mx-4 mb-3 grid grid-cols-4 gap-2 rounded-xl p-3"
+                    style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
+                    {[
+                      { label: 'Calories', val: Math.round(totals.calories), Icon: Flame, color: 'text-amber-400' },
+                      { label: 'Protein', val: `${Math.round(totals.protein)}g`, Icon: Beef, color: 'text-[var(--primary)]' },
+                      { label: 'Carbs', val: `${Math.round(totals.carbs)}g`, Icon: Wheat, color: 'text-blue-400' },
+                      { label: 'Fat', val: `${Math.round(totals.fat)}g`, Icon: Droplets, color: 'text-purple-400' },
+                    ].map(({ label, val, Icon, color }) => (
+                      <div key={label} className="flex flex-col items-center gap-0.5">
+                        <Icon size={12} className={color} />
+                        <p className={`text-sm font-bold ${color}`}>{val}</p>
+                        <p className="text-[10px] text-[var(--text-muted)]">{label}</p>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
+              <div className="px-4 pb-4 space-y-1">
+                {MEAL_ORDER.map((type) => {
+                  const typeMeals = mealsByType[type];
+                  if (typeMeals.length === 0) return null;
+                  return (
+                    <div key={type}>
+                      <div className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold mb-1 ${MEAL_COLORS[type]}`}>
+                        {MEAL_LABELS[type]}
+                      </div>
+                      {typeMeals.map((entry) => (
                         <div key={entry.id}
-                          className="flex items-center gap-3 py-2 px-3 rounded-xl mb-1"
-                          style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
+                          className="flex items-center gap-3 py-2 px-3 rounded-xl mb-1 hover:bg-[var(--surface-2)] transition-colors"
+                          style={{ border: '1px solid var(--border)' }}>
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-medium text-[var(--text)] truncate">
                               {entry.recipe?.name ?? 'Unknown'}
                             </p>
                             <p className="text-xs text-[var(--text-muted)]">
                               {entry.servings} serving{entry.servings !== 1 ? 's' : ''}
+                              {entry.recipe?.ingredients?.length ? ` · ${entry.recipe.ingredients.length} ingredients` : ''}
                             </p>
                           </div>
-                          {m && (
-                            <div className="flex items-center gap-3 shrink-0">
-                              <div className="flex items-center gap-1">
-                                <Flame size={11} className="text-amber-400" />
-                                <span className="text-xs font-semibold text-[var(--text)]">{Math.round(m.calories)}</span>
-                              </div>
-                              <div className="hidden sm:flex items-center gap-1">
-                                <Beef size={11} className="text-[var(--primary)]" />
-                                <span className="text-xs text-[var(--text-muted)]">{Math.round(m.protein)}g</span>
-                              </div>
-                              <div className="hidden sm:flex items-center gap-1">
-                                <Wheat size={11} className="text-blue-400" />
-                                <span className="text-xs text-[var(--text-muted)]">{Math.round(m.carbs)}g</span>
-                              </div>
-                            </div>
-                          )}
+                          {entry.recipe && (() => {
+                            const m = calcRecipeMacros(entry.recipe.ingredients, entry.servings);
+                            return (
+                              <p className="text-xs text-amber-400 font-semibold shrink-0">{Math.round(m.calories)} cal</p>
+                            );
+                          })()}
                         </div>
-                      );
-                    })}
-                  </div>
-                );
-              })}
-            </div>
+                      ))}
+                    </div>
+                  );
+                })}
+              </div>
+            </>
           )}
         </div>
 
@@ -395,16 +331,21 @@ export default function HomePage() {
         {/* Quick links */}
         <div className="grid grid-cols-2 gap-3">
           {[
-            { href: '/calendar', label: 'Plan This Week', desc: 'Add meals to your calendar', color: 'text-[var(--primary)]', bg: 'bg-emerald-500/10', Icon: CalendarDays },
-            { href: '/grocery', label: 'Grocery List', desc: 'See what you need to buy', color: 'text-amber-400', bg: 'bg-amber-500/10', Icon: ShoppingCart },
-            { href: '/recipes', label: 'My Recipes', desc: 'Browse & build recipes', color: 'text-blue-400', bg: 'bg-blue-500/10', Icon: BookOpen },
-            { href: '/macros', label: 'Weekly Report', desc: 'Track your progress', color: 'text-purple-400', bg: 'bg-purple-500/10', Icon: BarChart3 },
-          ].map(({ href, label, desc, color, bg, Icon }) => (
+            { href: '/calendar', label: 'Plan This Week', desc: 'Add meals to your calendar', color: 'text-[var(--primary)]', bg: 'bg-emerald-500/10', Icon: CalendarDays, premium: false },
+            { href: '/grocery', label: 'Grocery List', desc: 'See what you need to buy', color: 'text-amber-400', bg: 'bg-amber-500/10', Icon: ShoppingCart, premium: false },
+            { href: '/recipes', label: 'My Recipes', desc: 'Browse & build recipes', color: 'text-blue-400', bg: 'bg-blue-500/10', Icon: BookOpen, premium: false },
+            ...(!profile?.is_premium
+              ? [{ href: '/settings', label: 'Upgrade to Premium', desc: 'AI meal plans from $3.50/mo', color: 'text-amber-400', bg: 'bg-amber-500/10', Icon: Crown, premium: false }]
+              : [{ href: '/settings', label: 'Premium Features', desc: '6 features unlocked — tap to explore', color: 'text-amber-400', bg: 'bg-amber-500/10', Icon: Crown, premium: true }]),
+          ].map(({ href, label, desc, color, bg, Icon, premium: isPremiumTile }) => (
             <Link
               key={href}
               href={href}
-              className="rounded-2xl border border-[var(--border)] p-4 flex flex-col gap-1.5 hover:border-[var(--border-2)] transition-all duration-200 group"
-              style={{ background: 'var(--surface)' }}
+              className="rounded-2xl border p-4 flex flex-col gap-1.5 hover:scale-[1.02] transition-all duration-200 group"
+              style={{
+                background: isPremiumTile ? 'linear-gradient(135deg, rgba(245,158,11,0.07), rgba(245,158,11,0.02))' : 'var(--surface)',
+                borderColor: isPremiumTile ? 'rgba(245,158,11,0.3)' : 'var(--border)',
+              }}
             >
               <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${bg}`}>
                 <Icon size={14} className={color} />

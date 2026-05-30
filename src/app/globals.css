@@ -103,3 +103,22 @@ button, a, input, select, textarea {
   mask-composite: exclude;
   pointer-events: none;
 }
+
+/* Focus ring for accessibility */
+:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+/* Hide scrollbar utility */
+.scrollbar-none {
+  scrollbar-width: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
+/* Safe area padding for mobile bottom nav */
+.pb-safe {
+  padding-bottom: max(12px, env(safe-area-inset-bottom));
+}

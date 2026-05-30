@@ -7,10 +7,10 @@ import {
   CalendarDays,
   BookOpen,
   ShoppingCart,
-  BarChart3,
   Settings,
   ChefHat,
   Crown,
+  PartyPopper,
 } from 'lucide-react';
 
 const navItems = [
@@ -18,7 +18,7 @@ const navItems = [
   { href: '/calendar', icon: CalendarDays, label: 'Meal Calendar' },
   { href: '/recipes', icon: BookOpen, label: 'Recipes' },
   { href: '/grocery', icon: ShoppingCart, label: 'Grocery List' },
-  { href: '/macros', icon: BarChart3, label: 'Macros' },
+  { href: '/events', icon: PartyPopper, label: 'Event Menus' },
 ];
 
 export function Sidebar({ isPremium }: { isPremium?: boolean }) {
@@ -74,20 +74,38 @@ export function Sidebar({ isPremium }: { isPremium?: boolean }) {
 
       {/* Bottom */}
       <div className="px-3 pb-4 flex flex-col gap-1 border-t border-[var(--border)] pt-4 mx-3 mt-3">
-        {!isPremium && (
-          <div className="rounded-xl p-3 mb-2"
-            style={{ background: 'linear-gradient(135deg, rgba(245,158,11,0.08), rgba(245,158,11,0.03))', border: '1px solid rgba(245,158,11,0.15)' }}>
-            <div className="flex items-center gap-1.5 mb-1">
-              <Crown size={13} className="text-amber-400" />
-              <span className="text-xs font-semibold text-amber-400">Go Premium</span>
+        {isPremium ? (
+          <div className="rounded-xl p-3 mb-2 flex items-center gap-2.5"
+            style={{ background: 'linear-gradient(135deg, rgba(245,158,11,0.10), rgba(245,158,11,0.04))', border: '1px solid rgba(245,158,11,0.2)' }}>
+            <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
+              style={{ background: 'linear-gradient(135deg, #F59E0B, #D97706)' }}>
+              <Crown size={13} className="text-black" />
             </div>
-            <p className="text-[11px] text-[var(--text-muted)] mb-2 leading-relaxed">AI suggestions, barcode scanner & more</p>
+            <div>
+              <p className="text-[11px] font-bold text-amber-400 leading-none">Premium</p>
+              <p className="text-[10px] text-[var(--text-muted)] mt-0.5 opacity-70">All features unlocked ✓</p>
+            </div>
+          </div>
+        ) : (
+          <div className="rounded-xl p-3 mb-2 relative overflow-hidden"
+            style={{ background: 'linear-gradient(135deg, rgba(245,158,11,0.10), rgba(245,158,11,0.04))', border: '1px solid rgba(245,158,11,0.2)' }}>
+            <div className="absolute top-2 right-2 w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+            <div className="flex items-center gap-1.5 mb-1">
+              <Crown size={12} className="text-amber-400" />
+              <span className="text-[11px] font-bold text-amber-400 uppercase tracking-wider">Go Premium</span>
+            </div>
+            <p className="text-[11px] text-[var(--text-muted)] mb-1 leading-relaxed font-medium">
+              AI meal plans in 60 seconds
+            </p>
+            <p className="text-[10px] text-[var(--text-muted)] mb-2.5 opacity-70">
+              From $3.50/mo · Cancel anytime
+            </p>
             <Link
               href="/settings"
-              className="block w-full text-center text-xs font-semibold rounded-lg py-1.5 transition-colors"
+              className="block w-full text-center text-xs font-bold rounded-lg py-1.5 transition-all hover:opacity-90 active:scale-95"
               style={{ background: 'linear-gradient(135deg, #F59E0B, #D97706)', color: '#000' }}
             >
-              Upgrade
+              Upgrade — 7-day guarantee ✓
             </Link>
           </div>
         )}
@@ -106,7 +124,15 @@ export function Sidebar({ isPremium }: { isPremium?: boolean }) {
           {pathname.startsWith('/settings') && (
             <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 rounded-r-full bg-[var(--primary)]" />
           )}
-          <Settings size={17} className={pathname.startsWith('/settings') ? 'text-[var(--primary)]' : ''} />
+          <span className="relative">
+            <Settings size={17} className={pathname.startsWith('/settings') ? 'text-[var(--primary)]' : ''} />
+            {isPremium && (
+              <span className="absolute -top-1 -right-1.5 w-3.5 h-3.5 rounded-full flex items-center justify-center"
+                style={{ background: 'linear-gradient(135deg, #F59E0B, #D97706)' }}>
+                <Crown size={7} className="text-black" />
+              </span>
+            )}
+          </span>
           Settings
         </Link>
       </div>

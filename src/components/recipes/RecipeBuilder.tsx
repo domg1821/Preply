@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { Plus, Sparkles, ChevronDown, Check } from 'lucide-react';
+import { Plus, Sparkles, ChevronDown, Check, Clock, Flame, GripVertical, Trash2, ChefHat } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { IngredientRow, IngredientDraft } from './IngredientRow';
@@ -15,6 +15,9 @@ interface Props {
     default_servings: number;
     tags: string[];
     ingredients: Omit<Ingredient, 'id'>[];
+    steps: string[];
+    prep_time: number | null;
+    cook_time: number | null;
   }) => Promise<void>;
   onCancel: () => void;
   saving?: boolean;
@@ -55,6 +58,9 @@ export function RecipeBuilder({ onSave, onCancel, saving }: Props) {
   const [templateMatches, setTemplateMatches] = useState<RecipeTemplate[]>([]);
   const [appliedTemplate, setAppliedTemplate] = useState<string | null>(null);
   const [showTemplates, setShowTemplates] = useState(false);
+  const [prepTime, setPrepTime] = useState('');
+  const [cookTime, setCookTime] = useState('');
+  const [steps, setSteps] = useState<string[]>(['']);
 
   // Search templates whenever the recipe name changes
   useEffect(() => {
@@ -103,6 +109,10 @@ export function RecipeBuilder({ onSave, onCancel, saving }: Props) {
     });
   const preview = calcRecipeMacros(previewIngredients, 1);
 
+  function addStep() { setSteps(prev => [...prev, '']); }
+  function removeStep(i: number) { setSteps(prev => prev.filter((_, idx) => idx !== i)); }
+  function updateStep(i: number, val: string) { setSteps(prev => prev.map((s, idx) => idx === i ? val : s)); }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!name.trim()) return;
@@ -112,6 +122,9 @@ export function RecipeBuilder({ onSave, onCancel, saving }: Props) {
       default_servings: Number(servings) || 1,
       tags: tags.split(',').map((t) => t.trim()).filter(Boolean),
       ingredients: previewIngredients.map(({ id: _id, ...rest }) => rest),
+      steps: steps.map(s => s.trim()).filter(Boolean),
+      prep_time: prepTime ? Number(prepTime) : null,
+      cook_time: cookTime ? Number(cookTime) : null,
     });
   }
 
@@ -229,6 +242,83 @@ export function RecipeBuilder({ onSave, onCancel, saving }: Props) {
         >
           <Plus size={16} />
           Add ingredient
+        </button>
+      </div>
+
+      {/* Prep + Cook times */}
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className="block text-xs font-semibold text-[var(--text-muted)] mb-1.5 flex items-center gap-1.5">
+            <Clock size={11} /> Prep time (min)
+          </label>
+          <input
+            type="number"
+            min="0"
+            placeholder="e.g. 15"
+            value={prepTime}
+            onChange={e => setPrepTime(e.target.value)}
+            className="w-full text-sm rounded-xl px-3 py-2.5 border border-[var(--border)] text-[var(--text)] placeholder:text-[var(--text-muted)] outline-none focus:border-[var(--primary)] transition-colors"
+            style={{ background: 'var(--surface-2)' }}
+          />
+        </div>
+        <div>
+          <label className="block text-xs font-semibold text-[var(--text-muted)] mb-1.5 flex items-center gap-1.5">
+            <Flame size={11} /> Cook time (min)
+          </label>
+          <input
+            type="number"
+            min="0"
+            placeholder="e.g. 30"
+            value={cookTime}
+            onChange={e => setCookTime(e.target.value)}
+            className="w-full text-sm rounded-xl px-3 py-2.5 border border-[var(--border)] text-[var(--text)] placeholder:text-[var(--text-muted)] outline-none focus:border-[var(--primary)] transition-colors"
+            style={{ background: 'var(--surface-2)' }}
+          />
+        </div>
+      </div>
+
+      {/* Steps / Method */}
+      <div>
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-sm font-semibold text-[var(--text)] flex items-center gap-1.5">
+            <ChefHat size={14} className="text-[var(--primary)]" />
+            Cooking Steps
+            <span className="text-xs font-normal text-[var(--text-muted)]">(optional)</span>
+          </h3>
+        </div>
+        <div className="flex flex-col gap-2">
+          {steps.map((step, i) => (
+            <div key={i} className="flex gap-2 items-start">
+              <div className="w-6 h-6 rounded-full bg-[var(--primary)]/10 text-[var(--primary)] text-xs font-bold flex items-center justify-center shrink-0 mt-2.5">
+                {i + 1}
+              </div>
+              <textarea
+                rows={2}
+                placeholder={`Step ${i + 1}: e.g. Heat oil in a large pan over medium heat...`}
+                value={step}
+                onChange={e => updateStep(i, e.target.value)}
+                className="flex-1 text-sm rounded-xl px-3 py-2.5 border border-[var(--border)] text-[var(--text)] placeholder:text-[var(--text-muted)] outline-none focus:border-[var(--primary)] transition-colors resize-none"
+                style={{ background: 'var(--surface-2)' }}
+              />
+              {steps.length > 1 && (
+                <button
+                  type="button"
+                  onClick={() => removeStep(i)}
+                  className="mt-2.5 p-1.5 rounded-lg text-[var(--text-muted)] hover:text-red-400 hover:bg-red-500/10 transition-all"
+                >
+                  <Trash2 size={13} />
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+        <button
+          type="button"
+          onClick={addStep}
+          className="mt-3 flex items-center gap-1.5 text-sm text-[var(--primary)] hover:text-[var(--primary-light)] transition-colors"
+        >
+          <Plus size={16} />
+          Add step
         </button>
       </div>
 

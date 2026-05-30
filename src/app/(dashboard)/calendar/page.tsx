@@ -1,14 +1,16 @@
 'use client';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { ChevronLeft, ChevronRight, ChevronUp, ChevronDown, ShoppingCart, BookOpen, Database, Flame, Beef, Wheat, Droplets, Sparkles, Check } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ChevronUp, ChevronDown, ShoppingCart, BookOpen, Database, Sparkles, Check, Crown, Shield, LayoutGrid, CalendarDays } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { MealSlot } from '@/components/calendar/MealSlot';
 import { Badge } from '@/components/ui/Badge';
 import { MealPlanEntry, MealType, Recipe, FoodItem } from '@/types';
-import { formatDate, getMondayOfWeek, getWeekDates, calcRecipeMacros, roundMacro } from '@/lib/utils';
+import { formatDate, getMondayOfWeek, getWeekDates, roundMacro } from '@/lib/utils';
 import { format, isToday } from 'date-fns';
+import { createClient } from '@/lib/supabase/client';
+import Link from 'next/link';
 
 const MEAL_TYPES: MealType[] = ['breakfast', 'lunch', 'dinner', 'snack'];
 const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -45,6 +47,28 @@ export default function CalendarPage() {
   const [grocerySuccess, setGrocerySuccess] = useState(false);
   const [groceryToast, setGroceryToast] = useState<string | null>(null);
   const [showSuggest, setShowSuggest] = useState(false);
+  const [isPremium, setIsPremium] = useState(false);
+  const [showPremiumGate, setShowPremiumGate] = useState(false);
+  const [calView, setCalView] = useState<'week' | 'month'>('week');
+
+  useEffect(() => {
+    async function checkPremium() {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data } = await supabase.from('profiles').select('is_premium').eq('id', user.id).single();
+      if (data?.is_premium) {
+        setIsPremium(true);
+      } else {
+        // Re-check once after 3s in case the confirm endpoint is still running
+        setTimeout(async () => {
+          const { data: retryData } = await supabase.from('profiles').select('is_premium').eq('id', user.id).single();
+          if (retryData?.is_premium) setIsPremium(true);
+        }, 3000);
+      }
+    }
+    checkPremium();
+  }, []);
 
   const weekDates = getWeekDates(weekStart);
 
@@ -131,39 +155,16 @@ export default function CalendarPage() {
 
   async function generateGroceryList() {
     setGeneratingGrocery(true);
-    const items: { name: string; amount: number; unit: string; source_recipe: string }[] = [];
-    for (const entry of entries) {
-      if (!entry.recipe) continue;
-      const ings = entry.recipe.ingredients ?? [];
-      if (ings.length > 0) {
-        // Push each ingredient scaled to the planned servings
-        for (const ing of ings) {
-          const scaled = Math.round(ing.amount_per_serving * entry.servings * 100) / 100;
-          items.push({
-            name: ing.name,
-            amount: scaled,
-            unit: ing.unit,
-            source_recipe: entry.recipe.name,
-          });
-        }
-      } else {
-        // Fallback: recipe has no saved ingredients — add the recipe as a single item
-        items.push({
-          name: entry.recipe.name,
-          amount: entry.servings,
-          unit: 'serving',
-          source_recipe: entry.recipe.name,
-        });
-      }
-    }
-    await fetch('/api/grocery', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ items }),
-    });
+    const weekStartStr = formatDate(weekStart);
+    // Clear existing checks for the week so the new sync is fresh
+    await fetch(`/api/grocery?clear_week=${weekStartStr}`, { method: 'DELETE' });
+    // Navigate to grocery page with the week param — the page will load from meal_plans directly
     setGeneratingGrocery(false);
     setGrocerySuccess(true);
-    setTimeout(() => setGrocerySuccess(false), 3000);
+    setTimeout(() => {
+      setGrocerySuccess(false);
+      router.push(`/grocery?week_start=${weekStartStr}`);
+    }, 600);
   }
 
   async function handleApplySuggestions(suggestions: SuggestionItem[]) {
@@ -185,20 +186,6 @@ export default function CalendarPage() {
     setShowSuggest(false);
   }
 
-  const weekMacros = entries.reduce(
-    (acc, e) => {
-      if (!e.recipe) return acc;
-      const m = calcRecipeMacros(e.recipe.ingredients, e.servings);
-      return {
-        calories: acc.calories + m.calories,
-        protein: acc.protein + m.protein,
-        carbs: acc.carbs + m.carbs,
-        fat: acc.fat + m.fat,
-      };
-    },
-    { calories: 0, protein: 0, carbs: 0, fat: 0 }
-  );
-
   return (
     <div className="p-4 md:p-6 max-w-6xl mx-auto">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
@@ -208,54 +195,79 @@ export default function CalendarPage() {
             {format(weekStart, 'MMM d')} – {format(weekDates[6], 'MMM d, yyyy')}
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <Button variant="secondary" size="sm" onClick={() => setShowSuggest(true)}>
+        <div className="flex items-center gap-2 flex-wrap">
+          <Button variant="secondary" size="sm" onClick={() => isPremium ? setShowSuggest(true) : setShowPremiumGate(true)}>
             <Sparkles size={14} />
             AI Suggest
+            {!isPremium && <Crown size={11} className="text-amber-400 ml-0.5" />}
           </Button>
           <Button variant="secondary" size="sm" onClick={() => router.push('/grocery')}>
             <ShoppingCart size={14} />
-            Build Grocery List
+            Grocery List
           </Button>
-          {entries.length > 0 && (
-            <Button variant="secondary" size="sm" onClick={generateGroceryList} loading={generatingGrocery}>
-              {grocerySuccess ? 'Synced!' : 'Sync Grocery List'}
+          {/* Month view toggle — premium */}
+          {isPremium ? (
+            <Button
+              variant={calView === 'month' ? 'primary' : 'secondary'}
+              size="sm"
+              onClick={() => setCalView(v => v === 'week' ? 'month' : 'week')}
+            >
+              <LayoutGrid size={14} />
+              {calView === 'month' ? 'Week View' : 'Month View'}
             </Button>
+          ) : (
+            <button
+              onClick={() => setShowPremiumGate(true)}
+              className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-xl border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--text)] transition-colors"
+              style={{ background: 'var(--surface)' }}
+            >
+              <LayoutGrid size={13} />
+              Month View
+              <Crown size={10} className="text-amber-400" />
+            </button>
           )}
-          <button onClick={prevWeek} className="p-2 rounded-xl hover:bg-[var(--surface-2)] text-[var(--text-muted)] transition-colors">
-            <ChevronLeft size={18} />
-          </button>
-          <button
-            onClick={() => setWeekStart(getMondayOfWeek(new Date()))}
-            className="text-xs px-2 py-1 rounded-lg bg-[var(--surface)] border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--text)] transition-colors"
-          >
-            Today
-          </button>
-          <button onClick={nextWeek} className="p-2 rounded-xl hover:bg-[var(--surface-2)] text-[var(--text-muted)] transition-colors">
-            <ChevronRight size={18} />
-          </button>
+          {calView === 'week' && (
+            <>
+              <button onClick={prevWeek} className="p-2 rounded-xl hover:bg-[var(--surface-2)] text-[var(--text-muted)] transition-colors">
+                <ChevronLeft size={18} />
+              </button>
+              <button
+                onClick={() => setWeekStart(getMondayOfWeek(new Date()))}
+                className="text-xs px-2 py-1 rounded-lg bg-[var(--surface)] border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--text)] transition-colors"
+              >
+                Today
+              </button>
+              <button onClick={nextWeek} className="p-2 rounded-xl hover:bg-[var(--surface-2)] text-[var(--text-muted)] transition-colors">
+                <ChevronRight size={18} />
+              </button>
+            </>
+          )}
         </div>
       </div>
-
-      {entries.length > 0 && (
-        <div className="grid grid-cols-4 gap-3 mb-6">
-          {[
-            { label: 'Total Cal', value: Math.round(weekMacros.calories), color: 'text-amber-400' },
-            { label: 'Protein', value: `${roundMacro(weekMacros.protein)}g`, color: 'text-[var(--primary)]' },
-            { label: 'Carbs', value: `${roundMacro(weekMacros.carbs)}g`, color: 'text-blue-400' },
-            { label: 'Fat', value: `${roundMacro(weekMacros.fat)}g`, color: 'text-purple-400' },
-          ].map(({ label, value, color }) => (
-            <div key={label} className="rounded-xl bg-[var(--surface)] border border-[var(--border)] p-3 text-center">
-              <p className={`text-lg font-bold ${color}`}>{value}</p>
-              <p className="text-xs text-[var(--text-muted)]">{label}</p>
-            </div>
-          ))}
-        </div>
-      )}
 
       {loading ? (
         <div className="h-64 rounded-2xl bg-[var(--surface)] border border-[var(--border)] animate-pulse" />
       ) : (
+        <>
+          {calView === 'month' ? (
+            <MonthView
+              weekStart={weekStart}
+              entries={entries}
+              onSelectWeek={(d) => { setWeekStart(d); setCalView('week'); }}
+              onAddMeal={(date, mealType) => setAddModal({ date, mealType })}
+            />
+          ) : (
+          <>
+          {entries.length === 0 && (
+            <div className="mb-4 rounded-2xl border border-[var(--primary)]/20 px-4 py-3 flex items-center gap-3"
+              style={{ background: 'rgba(16,185,129,0.05)' }}>
+              <span className="text-xl shrink-0">👆</span>
+              <p className="text-sm text-[var(--text-muted)]">
+                <span className="font-semibold text-[var(--text)]">Tap any cell below</span> to add a meal to that day.
+                {!isPremium && <span className="ml-1">Or use <span className="text-amber-400 font-semibold">AI Suggest</span> to fill your whole week instantly.</span>}
+              </p>
+            </div>
+          )}
         <div className="overflow-x-auto">
           <div className="min-w-[640px]">
             <div className="grid grid-cols-8 gap-2 mb-2">
@@ -295,6 +307,9 @@ export default function CalendarPage() {
             ))}
           </div>
         </div>
+          </>
+          )}
+        </>
       )}
 
       <Modal
@@ -361,6 +376,184 @@ export default function CalendarPage() {
         existingEntries={entries}
         onApply={handleApplySuggestions}
       />
+
+      {/* Premium Gate Modal */}
+      {showPremiumGate && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowPremiumGate(false)} />
+          <div className="relative w-full max-w-sm rounded-2xl overflow-hidden shadow-2xl"
+            style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
+            {/* Gradient header */}
+            <div className="relative px-6 pt-6 pb-5 text-center"
+              style={{ background: 'linear-gradient(135deg, rgba(245,158,11,0.12), rgba(245,158,11,0.04))' }}>
+              <div className="absolute top-3 right-3">
+                <button
+                  onClick={() => setShowPremiumGate(false)}
+                  className="w-7 h-7 rounded-full flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--text)] transition-colors"
+                  style={{ background: 'var(--surface-2)' }}
+                >
+                  <span className="text-sm leading-none">✕</span>
+                </button>
+              </div>
+              <div className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-3"
+                style={{ background: 'linear-gradient(135deg, #F59E0B, #D97706)' }}>
+                <Crown size={26} className="text-white" />
+              </div>
+              <h2 className="text-lg font-bold text-[var(--text)] mb-1">AI Meal Planning</h2>
+              <p className="text-sm text-[var(--text-muted)]">
+                Let AI build your entire week in seconds — personalized to your goals.
+              </p>
+            </div>
+
+            {/* Features */}
+            <div className="px-6 py-4 space-y-2.5">
+              {[
+                { icon: '⚡', text: 'Full week planned in under 60 seconds' },
+                { icon: '🎯', text: 'Matches your calories & macro goals' },
+                { icon: '🛒', text: 'Auto-generates your grocery list' },
+                { icon: '🔄', text: 'Regenerate any meal you don\'t like' },
+              ].map(({ icon, text }) => (
+                <div key={text} className="flex items-center gap-3">
+                  <span className="text-base shrink-0">{icon}</span>
+                  <p className="text-sm text-[var(--text)]">{text}</p>
+                </div>
+              ))}
+            </div>
+
+            {/* Social proof */}
+            <div className="mx-6 mb-4 rounded-xl px-4 py-2.5 flex items-center justify-between"
+              style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
+              <div className="text-center">
+                <p className="text-sm font-bold text-[var(--text)]">2,400+</p>
+                <p className="text-[10px] text-[var(--text-muted)]">Members</p>
+              </div>
+              <div className="w-px h-8 bg-[var(--border)]" />
+              <div className="text-center">
+                <p className="text-sm font-bold text-[var(--text)]">4.9 ★</p>
+                <p className="text-[10px] text-[var(--text-muted)]">Rating</p>
+              </div>
+              <div className="w-px h-8 bg-[var(--border)]" />
+              <div className="text-center">
+                <p className="text-sm font-bold text-amber-400">$3.50</p>
+                <p className="text-[10px] text-[var(--text-muted)]">Per month</p>
+              </div>
+            </div>
+
+            {/* CTA */}
+            <div className="px-6 pb-6 flex flex-col gap-2">
+              <Link
+                href="/settings"
+                className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-all hover:opacity-90 active:scale-95"
+                style={{ background: 'linear-gradient(135deg, #F59E0B, #D97706)', color: '#000' }}
+                onClick={() => setShowPremiumGate(false)}
+              >
+                <Crown size={15} />
+                Unlock AI Suggest — From $3.50/mo
+              </Link>
+              <p className="text-center text-[10px] text-[var(--text-muted)]">
+                🛡️ 7-day money-back guarantee · Cancel anytime
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Month View ──────────────────────────────────────────────────────────────
+
+function MonthView({
+  weekStart, entries, onSelectWeek, onAddMeal,
+}: {
+  weekStart: Date;
+  entries: MealPlanEntry[];
+  onSelectWeek: (monday: Date) => void;
+  onAddMeal: (date: string, mealType: MealType) => void;
+}) {
+  // Show 4 weeks starting from the current weekStart's Monday
+  const monday = getMondayOfWeek(weekStart);
+  const weeks: Date[][] = [];
+  for (let w = 0; w < 4; w++) {
+    const weekMonday = new Date(monday);
+    weekMonday.setDate(monday.getDate() + w * 7);
+    weeks.push(getWeekDates(weekMonday));
+  }
+
+  const entryMap = new Map<string, MealPlanEntry[]>();
+  for (const e of entries) {
+    const arr = entryMap.get(e.date) ?? [];
+    arr.push(e);
+    entryMap.set(e.date, arr);
+  }
+
+  const MEAL_COLORS_DOT: Record<string, string> = {
+    breakfast: 'bg-amber-400',
+    lunch: 'bg-[var(--primary)]',
+    dinner: 'bg-purple-400',
+    snack: 'bg-blue-400',
+  };
+
+  return (
+    <div className="space-y-3">
+      <p className="text-xs text-[var(--text-muted)] mb-2">Click a week row to plan it, or click a day to add a meal.</p>
+      {weeks.map((weekDays, wi) => {
+        const wMonday = weekDays[0];
+        const wLabel = `${format(wMonday, 'MMM d')} – ${format(weekDays[6], 'MMM d')}`;
+        const weekEntryCount = weekDays.reduce((acc, d) => {
+          return acc + (entryMap.get(formatDate(d))?.length ?? 0);
+        }, 0);
+
+        return (
+          <div key={wi} className="rounded-2xl border border-[var(--border)] overflow-hidden" style={{ background: 'var(--surface)' }}>
+            {/* Week header */}
+            <button
+              onClick={() => onSelectWeek(wMonday)}
+              className="w-full flex items-center justify-between px-4 py-2.5 hover:bg-[var(--surface-2)] transition-colors border-b border-[var(--border)]"
+            >
+              <div className="flex items-center gap-2">
+                <CalendarDays size={13} className="text-[var(--primary)]" />
+                <span className="text-xs font-semibold text-[var(--text)]">{wLabel}</span>
+              </div>
+              <span className="text-[11px] text-[var(--text-muted)]">
+                {weekEntryCount > 0 ? `${weekEntryCount} meal${weekEntryCount !== 1 ? 's' : ''} planned` : 'Empty — tap to plan'}
+              </span>
+            </button>
+
+            {/* Day cells */}
+            <div className="grid grid-cols-7 divide-x divide-[var(--border)]">
+              {weekDays.map((date, di) => {
+                const dateStr = formatDate(date);
+                const dayEntries = entryMap.get(dateStr) ?? [];
+                const today = isToday(date);
+
+                return (
+                  <button
+                    key={di}
+                    onClick={() => onAddMeal(dateStr, 'dinner')}
+                    className={`flex flex-col items-center gap-1 py-3 px-1 hover:bg-[var(--surface-2)] transition-colors ${today ? 'bg-[var(--primary)]/5' : ''}`}
+                  >
+                    <span className={`text-[10px] font-semibold ${today ? 'text-[var(--primary)]' : 'text-[var(--text-muted)]'}`}>
+                      {DAY_LABELS[di]}
+                    </span>
+                    <span className={`text-sm font-bold ${today ? 'text-[var(--primary)]' : 'text-[var(--text)]'}`}>
+                      {format(date, 'd')}
+                    </span>
+                    <div className="flex gap-0.5 flex-wrap justify-center min-h-[8px]">
+                      {dayEntries.slice(0, 4).map((e, ei) => (
+                        <span key={ei} className={`w-1.5 h-1.5 rounded-full ${MEAL_COLORS_DOT[e.meal_type] ?? 'bg-gray-400'}`} />
+                      ))}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })}
+      <p className="text-center text-xs text-[var(--text-muted)] pt-1">
+        Colored dots = planned meals · Click any week header to switch to week view
+      </p>
     </div>
   );
 }
@@ -379,7 +572,6 @@ function MealDetailContent({
   if (!recipe) return <p className="text-sm text-[var(--text-muted)]">Recipe data unavailable.</p>;
 
   const ings = recipe.ingredients ?? [];
-  const macros = calcRecipeMacros(ings, s);
 
   async function handleAddToGrocery() {
     setAdding(true);
@@ -404,22 +596,6 @@ function MealDetailContent({
         </button>
       </div>
 
-      {/* Macro summary bar */}
-      <div className="grid grid-cols-4 gap-2 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] p-3">
-        {[
-          { label: 'Calories', value: Math.round(macros.calories), unit: 'kcal', color: 'text-amber-400', Icon: Flame },
-          { label: 'Protein', value: roundMacro(macros.protein), unit: 'g', color: 'text-[var(--primary)]', Icon: Beef },
-          { label: 'Carbs', value: roundMacro(macros.carbs), unit: 'g', color: 'text-blue-400', Icon: Wheat },
-          { label: 'Fat', value: roundMacro(macros.fat), unit: 'g', color: 'text-purple-400', Icon: Droplets },
-        ].map(({ label, value, unit, color, Icon }) => (
-          <div key={label} className="flex flex-col items-center gap-0.5">
-            <Icon size={13} className={color} />
-            <p className={`text-sm font-bold ${color}`}>{value}<span className="text-[10px] font-normal ml-0.5">{unit}</span></p>
-            <p className="text-[10px] text-[var(--text-muted)]">{label}</p>
-          </div>
-        ))}
-      </div>
-
       {/* Ingredient list */}
       <div>
         <p className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider mb-2">
@@ -434,7 +610,6 @@ function MealDetailContent({
           <div className="flex flex-col gap-1.5">
             {ings.map((ing, i) => {
               const amount = ing.amount_per_serving * s;
-              const cal = Math.round((ing.calories_per_unit ?? 0) * amount);
               return (
                 <div
                   key={ing.id ?? i}
@@ -445,14 +620,9 @@ function MealDetailContent({
                     <div className="w-1.5 h-1.5 rounded-full bg-[var(--primary)] shrink-0" />
                     <p className="text-sm font-medium text-[var(--text)] truncate">{ing.name}</p>
                   </div>
-                  <div className="flex items-center gap-3 shrink-0 text-right">
-                    <span className="text-sm text-[var(--text-muted)]">
-                      {Number.isInteger(amount) ? amount : Math.round(amount * 10) / 10} {ing.unit}
-                    </span>
-                    {cal > 0 && (
-                      <span className="text-xs text-amber-400 font-medium">{cal} cal</span>
-                    )}
-                  </div>
+                  <span className="text-sm text-[var(--text-muted)] shrink-0">
+                    {Number.isInteger(amount) ? amount : Math.round(amount * 10) / 10} {ing.unit}
+                  </span>
                 </div>
               );
             })}
@@ -484,7 +654,7 @@ function AddMealModalContent({
   onClose: () => void;
   onQuickAdd: (entry: MealPlanEntry) => void;
 }) {
-  const [tab, setTab] = useState<'recipes' | 'library'>('library');
+  const [tab, setTab] = useState<'recipes' | 'library'>('recipes');
   const [search, setSearch] = useState('');
   const [recipeServings, setRecipeServings] = useState<Record<string, number>>({});
   const [foods, setFoods] = useState<FoodItem[]>([]);
@@ -538,22 +708,22 @@ function AddMealModalContent({
       {/* Tab switcher */}
       <div className="flex rounded-xl bg-[var(--surface-2)] border border-[var(--border)] p-1 gap-1">
         <button
-          onClick={() => setTab('library')}
-          className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-sm font-medium transition-all ${
-            tab === 'library' ? 'bg-[var(--primary)] text-white' : 'text-[var(--text-muted)] hover:text-[var(--text)]'
-          }`}
-        >
-          <Database size={14} />
-          Food Library
-        </button>
-        <button
           onClick={() => setTab('recipes')}
           className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-sm font-medium transition-all ${
             tab === 'recipes' ? 'bg-[var(--primary)] text-white' : 'text-[var(--text-muted)] hover:text-[var(--text)]'
           }`}
         >
           <BookOpen size={14} />
-          My Recipes
+          Recipes {recipes.length > 0 && <span className={`text-[11px] px-1.5 py-0.5 rounded-full ml-0.5 ${tab === 'recipes' ? 'bg-white/20' : 'bg-[var(--border)]'}`}>{recipes.filter((r) => !(r as Recipe & { is_quick_add?: boolean }).is_quick_add).length}</span>}
+        </button>
+        <button
+          onClick={() => setTab('library')}
+          className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-sm font-medium transition-all ${
+            tab === 'library' ? 'bg-[var(--primary)] text-white' : 'text-[var(--text-muted)] hover:text-[var(--text)]'
+          }`}
+        >
+          <Database size={14} />
+          Quick Foods
         </button>
       </div>
 
@@ -561,7 +731,7 @@ function AddMealModalContent({
       <input
         ref={searchRef}
         type="text"
-        placeholder={tab === 'library' ? 'Search 200+ foods…' : 'Search your recipes…'}
+        placeholder={tab === 'library' ? 'Search individual foods…' : 'Search recipes…'}
         value={search}
         onChange={(e) => setSearch(e.target.value)}
         className="w-full px-4 py-2.5 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-sm text-[var(--text)] placeholder-[var(--text-muted)] outline-none focus:border-[var(--primary)] transition-all"
@@ -644,11 +814,13 @@ function AddMealModalContent({
           filteredRecipes.length === 0 ? (
             <div className="text-center py-8">
               <p className="text-sm text-[var(--text-muted)]">
-                {search ? 'No recipes match.' : 'No saved recipes yet.'}
+                {search ? `No recipes match "${search}".` : 'No recipes yet.'}
               </p>
-              <button onClick={onClose} className="text-xs text-[var(--primary)] mt-1 hover:underline">
-                Create your first recipe →
-              </button>
+              {!search && (
+                <button onClick={onClose} className="text-xs text-[var(--primary)] mt-1 hover:underline">
+                  Go to Recipes to import starter meals →
+                </button>
+              )}
             </div>
           ) : (
             filteredRecipes.map((recipe) => {
