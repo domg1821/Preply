@@ -35,8 +35,10 @@ workflows:
 
       - name: List provisioning profiles
         script: |
-          ls ~/Library/MobileDevice/Provisioning\ Profiles/ || echo "No profiles folder"
-          security find-identity -v -p codesigning || echo "No identities"
+          echo "=== Profiles ==="
+          ls ~/Library/MobileDevice/Provisioning\ Profiles/ 2>/dev/null || echo "No profiles folder"
+          echo "=== Identities ==="
+          security find-identity -v -p codesigning
 
       - name: Build .ipa
         script: |
@@ -45,6 +47,12 @@ workflows:
             WORKSPACE=$(find ios -name "*.xcworkspace" | head -1)
           fi
           echo "Using workspace: $WORKSPACE"
+
+          # Get the provisioning profile UUID from the downloaded profile
+          PROFILE_PATH=$(ls ~/Library/MobileDevice/Provisioning\ Profiles/*.mobileprovision 2>/dev/null | head -1)
+          echo "Profile path: $PROFILE_PATH"
+          PROFILE_UUID=$(security cms -D -i "$PROFILE_PATH" 2>/dev/null | plutil -extract UUID raw -)
+          echo "Profile UUID: $PROFILE_UUID"
 
           xcodebuild \
             -workspace "$WORKSPACE" \
@@ -55,8 +63,31 @@ workflows:
             CODE_SIGN_STYLE=Manual \
             DEVELOPMENT_TEAM="$APPLE_TEAM_ID" \
             CODE_SIGN_IDENTITY="iPhone Distribution" \
-            PROVISIONING_PROFILE_SPECIFIER="$BUNDLE_ID" \
-            | tail -50
+            PROVISIONING_PROFILE="$PROFILE_UUID" \
+            2>&1 | tail -30
+
+          xcodebuild \
+            -exportArchive \
+            -archivePath build/ios/xcarchive/App.xcarchive \
+            -exportOptionsPlist /dev/stdin \
+            -exportPath build/ios/ipa \
+            <<EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key>
+            <string>app-store-connect</string>
+            <key>teamID</key>
+            <string>$APPLE_TEAM_ID</string>
+            <key>provisioningProfiles</key>
+            <dict>
+              <key>$BUNDLE_ID</key>
+              <string>$PROFILE_UUID</string>
+            </dict>
+          </dict>
+          </plist>
+          EOF
 
     artifacts:
       - build/ios/ipa/*.ipa
