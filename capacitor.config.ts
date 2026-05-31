@@ -1,7 +1,7 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'com.yourname.preply',        // ← pick your bundle ID (reverse domain, all lowercase)
+  appId: 'com.dominicgeraci.preply',
   appName: 'Preply',
   webDir: 'out',                        // not used in server mode, but required by the schema
   server: {
