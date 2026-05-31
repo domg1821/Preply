@@ -39,13 +39,28 @@
 }
 
 * { box-sizing: border-box; }
-html, body { height: 100%; }
+
+html {
+  height: 100%;
+  /* Prevent horizontal scroll and rubber-band scrolling in all directions on iOS */
+  overflow-x: hidden;
+  position: fixed;
+  width: 100%;
+}
 
 body {
+  height: 100%;
+  width: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   background-color: var(--bg);
   color: var(--text);
   font-family: var(--font-geist-sans), system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
+  /* Prevent text size adjustment on orientation change */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
 /* Scrollbar */
