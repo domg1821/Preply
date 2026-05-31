@@ -34,6 +34,13 @@ workflows:
           keychain add-certificates
           xcode-project use-profiles
 
+      - name: Set build number
+        script: |
+          BUILD_NUMBER=$(app-store-connect get-latest-testflight-build-number "$BUNDLE_ID" --platform IOS 2>/dev/null || echo "1")
+          BUILD_NUMBER=$((BUILD_NUMBER + 1))
+          echo "Setting build number to $BUILD_NUMBER"
+          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $BUILD_NUMBER" ios/App/App/Info.plist
+
       - name: Build .ipa
         script: |
           xcode-project build-ipa \
