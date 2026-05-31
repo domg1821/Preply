@@ -5,7 +5,7 @@ const config: CapacitorConfig = {
   appName: 'Preply',
   webDir: 'out',                        // not used in server mode, but required by the schema
   server: {
-    url: 'https://your-app.vercel.app', // ← your Vercel deployment URL
+    url: 'https://preply-umber.vercel.app',
     cleartext: false,
     allowNavigation: [
       '*.supabase.co',
