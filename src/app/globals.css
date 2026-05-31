@@ -38,7 +38,11 @@
   --font-mono: var(--font-geist-mono);
 }
 
-* { box-sizing: border-box; }
+* {
+  box-sizing: border-box;
+  /* Kill the grey flash on tap — must be on every element */
+  -webkit-tap-highlight-color: transparent;
+}
 
 html {
   height: 100%;
@@ -60,18 +64,24 @@ body {
   -webkit-font-smoothing: antialiased;
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
-  /* Remove 300ms tap delay on iOS */
-  touch-action: manipulation;
   /* Safe area padding */
   padding-top: env(safe-area-inset-top);
-  padding-bottom: env(safe-area-inset-bottom);
   padding-left: env(safe-area-inset-left);
   padding-right: env(safe-area-inset-right);
 }
 
-/* Remove tap delay on all interactive elements */
+/* Instant tap response — no delay, no highlight */
 a, button, input, select, textarea, [role="button"] {
   touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  cursor: pointer;
+}
+
+/* Kill transition on buttons so they feel instant on mobile */
+@media (hover: none) {
+  button, a {
+    transition: none !important;
+  }
 }
 
 /* Scrollbar */

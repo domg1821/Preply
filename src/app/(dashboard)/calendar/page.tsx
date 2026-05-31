@@ -1,13 +1,13 @@
 'use client';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { ChevronLeft, ChevronRight, ChevronUp, ChevronDown, ShoppingCart, BookOpen, Database, Sparkles, Check, Crown, Shield, LayoutGrid, CalendarDays } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ChevronUp, ChevronDown, ShoppingCart, BookOpen, Database, Sparkles, Check, Crown, Shield, LayoutGrid, CalendarDays, Plus, X } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { MealSlot } from '@/components/calendar/MealSlot';
 import { Badge } from '@/components/ui/Badge';
 import { MealPlanEntry, MealType, Recipe, FoodItem } from '@/types';
-import { formatDate, getMondayOfWeek, getWeekDates, roundMacro } from '@/lib/utils';
+import { formatDate, getMondayOfWeek, getWeekDates, roundMacro, calcRecipeMacros } from '@/lib/utils';
 import { format, isToday } from 'date-fns';
 import { createClient } from '@/lib/supabase/client';
 import Link from 'next/link';
@@ -186,128 +186,247 @@ export default function CalendarPage() {
     setShowSuggest(false);
   }
 
+  const todayStr = formatDate(new Date());
+  const [selectedDay, setSelectedDay] = useState(() => {
+    const today = formatDate(new Date());
+    const thisWeekDates = getWeekDates(getMondayOfWeek(new Date()));
+    const isThisWeek = thisWeekDates.some(d => formatDate(d) === today);
+    return isThisWeek ? today : formatDate(getWeekDates(weekStart)[0]);
+  });
+
+  // Keep selectedDay in sync when week changes
+  useEffect(() => {
+    const dates = getWeekDates(weekStart);
+    const inWeek = dates.some(d => formatDate(d) === selectedDay);
+    if (!inWeek) setSelectedDay(formatDate(dates[0]));
+  }, [weekStart, selectedDay]);
+
+  const MEAL_COLORS_MOBILE: Record<string, { bg: string; text: string; dot: string }> = {
+    breakfast: { bg: 'bg-amber-500/10', text: 'text-amber-400', dot: 'bg-amber-400' },
+    lunch: { bg: 'bg-emerald-500/10', text: 'text-emerald-400', dot: 'bg-emerald-400' },
+    dinner: { bg: 'bg-purple-500/10', text: 'text-purple-400', dot: 'bg-purple-400' },
+    snack: { bg: 'bg-blue-500/10', text: 'text-blue-400', dot: 'bg-blue-400' },
+  };
+
   return (
-    <div className="p-4 md:p-6 max-w-6xl mx-auto">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-[var(--text)]">Meal Calendar</h1>
-          <p className="text-sm text-[var(--text-muted)] mt-0.5">
-            {format(weekStart, 'MMM d')} – {format(weekDates[6], 'MMM d, yyyy')}
-          </p>
+    <div className="max-w-6xl mx-auto">
+      {/* ── Header ── */}
+      <div className="flex items-center justify-between px-4 pt-4 pb-3 md:px-6 md:pt-6">
+        <div className="flex items-center gap-2">
+          <button onClick={prevWeek} className="w-8 h-8 flex items-center justify-center rounded-xl active:bg-[var(--surface-2)] text-[var(--text-muted)]">
+            <ChevronLeft size={18} />
+          </button>
+          <div>
+            <h1 className="text-lg font-bold text-[var(--text)] leading-tight">
+              {format(weekStart, 'MMM d')} – {format(weekDates[6], 'MMM d')}
+            </h1>
+            <p className="text-xs text-[var(--text-muted)]">{format(weekStart, 'yyyy')}</p>
+          </div>
+          <button onClick={nextWeek} className="w-8 h-8 flex items-center justify-center rounded-xl active:bg-[var(--surface-2)] text-[var(--text-muted)]">
+            <ChevronRight size={18} />
+          </button>
         </div>
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex items-center gap-1.5">
+          <button
+            onClick={() => { setWeekStart(getMondayOfWeek(new Date())); setSelectedDay(todayStr); }}
+            className="text-xs px-2.5 py-1.5 rounded-lg border border-[var(--border)] text-[var(--text-muted)] active:bg-[var(--surface-2)]"
+            style={{ background: 'var(--surface)' }}
+          >
+            Today
+          </button>
           <Button variant="secondary" size="sm" onClick={() => isPremium ? setShowSuggest(true) : setShowPremiumGate(true)}>
-            <Sparkles size={14} />
-            AI Suggest
-            {!isPremium && <Crown size={11} className="text-amber-400 ml-0.5" />}
+            <Sparkles size={13} />
+            <span className="hidden sm:inline">AI Suggest</span>
+            {!isPremium && <Crown size={10} className="text-amber-400" />}
           </Button>
-          <Button variant="secondary" size="sm" onClick={() => router.push('/grocery')}>
-            <ShoppingCart size={14} />
-            Grocery List
-          </Button>
-          {/* Month view toggle — premium */}
-          {isPremium ? (
-            <Button
-              variant={calView === 'month' ? 'primary' : 'secondary'}
-              size="sm"
-              onClick={() => setCalView(v => v === 'week' ? 'month' : 'week')}
-            >
-              <LayoutGrid size={14} />
-              {calView === 'month' ? 'Week View' : 'Month View'}
-            </Button>
-          ) : (
-            <button
-              onClick={() => setShowPremiumGate(true)}
-              className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-xl border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--text)] transition-colors"
-              style={{ background: 'var(--surface)' }}
-            >
-              <LayoutGrid size={13} />
-              Month View
-              <Crown size={10} className="text-amber-400" />
-            </button>
-          )}
-          {calView === 'week' && (
-            <>
-              <button onClick={prevWeek} className="p-2 rounded-xl hover:bg-[var(--surface-2)] text-[var(--text-muted)] transition-colors">
-                <ChevronLeft size={18} />
-              </button>
-              <button
-                onClick={() => setWeekStart(getMondayOfWeek(new Date()))}
-                className="text-xs px-2 py-1 rounded-lg bg-[var(--surface)] border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--text)] transition-colors"
-              >
-                Today
-              </button>
-              <button onClick={nextWeek} className="p-2 rounded-xl hover:bg-[var(--surface-2)] text-[var(--text-muted)] transition-colors">
-                <ChevronRight size={18} />
-              </button>
-            </>
-          )}
         </div>
       </div>
 
       {loading ? (
-        <div className="h-64 rounded-2xl bg-[var(--surface)] border border-[var(--border)] animate-pulse" />
+        <div className="mx-4 h-64 rounded-2xl bg-[var(--surface)] border border-[var(--border)] animate-pulse" />
       ) : (
         <>
           {calView === 'month' ? (
-            <MonthView
-              weekStart={weekStart}
-              entries={entries}
-              onSelectWeek={(d) => { setWeekStart(d); setCalView('week'); }}
-              onAddMeal={(date, mealType) => setAddModal({ date, mealType })}
-            />
+            <div className="px-4 md:px-6">
+              <MonthView
+                weekStart={weekStart}
+                entries={entries}
+                onSelectWeek={(d) => { setWeekStart(d); setCalView('week'); }}
+                onAddMeal={(date, mealType) => setAddModal({ date, mealType })}
+              />
+            </div>
           ) : (
-          <>
-          {entries.length === 0 && (
-            <div className="mb-4 rounded-2xl border border-[var(--primary)]/20 px-4 py-3 flex items-center gap-3"
-              style={{ background: 'rgba(16,185,129,0.05)' }}>
-              <span className="text-xl shrink-0">👆</span>
-              <p className="text-sm text-[var(--text-muted)]">
-                <span className="font-semibold text-[var(--text)]">Tap any cell below</span> to add a meal to that day.
-                {!isPremium && <span className="ml-1">Or use <span className="text-amber-400 font-semibold">AI Suggest</span> to fill your whole week instantly.</span>}
-              </p>
-            </div>
-          )}
-        <div className="overflow-x-auto">
-          <div className="min-w-[640px]">
-            <div className="grid grid-cols-8 gap-2 mb-2">
-              <div />
-              {weekDates.map((date, i) => (
-                <div key={i} className={`text-center py-2 rounded-xl text-sm font-medium ${isToday(date) ? 'bg-[var(--primary)]/10' : ''}`}>
-                  <p className="text-xs text-[var(--text-muted)]">{DAY_LABELS[i]}</p>
-                  <p className={`text-base font-bold ${isToday(date) ? 'text-[var(--primary)]' : 'text-[var(--text)]'}`}>
-                    {format(date, 'd')}
-                  </p>
+            <>
+              {/* ── Mobile Day View (shown on small screens) ── */}
+              <div className="md:hidden">
+                {/* Day chips */}
+                <div className="flex gap-2 px-4 pb-3 overflow-x-auto scrollbar-none">
+                  {weekDates.map((date, i) => {
+                    const dateStr = formatDate(date);
+                    const isSelected = dateStr === selectedDay;
+                    const isTodayDate = dateStr === todayStr;
+                    const dayEntries = entries.filter(e => e.date === dateStr);
+                    return (
+                      <button
+                        key={dateStr}
+                        onClick={() => setSelectedDay(dateStr)}
+                        className="flex flex-col items-center gap-1 shrink-0 w-12 py-2 rounded-2xl"
+                        style={{
+                          background: isSelected ? 'var(--primary)' : isTodayDate ? 'rgba(16,185,129,0.08)' : 'var(--surface)',
+                          border: `1px solid ${isSelected ? 'var(--primary)' : isTodayDate ? 'rgba(16,185,129,0.3)' : 'var(--border)'}`,
+                        }}
+                      >
+                        <span className={`text-[10px] font-bold uppercase ${isSelected ? 'text-white' : isTodayDate ? 'text-[var(--primary)]' : 'text-[var(--text-muted)]'}`}>
+                          {DAY_LABELS[i]}
+                        </span>
+                        <span className={`text-base font-bold ${isSelected ? 'text-white' : isTodayDate ? 'text-[var(--primary)]' : 'text-[var(--text)]'}`}>
+                          {format(date, 'd')}
+                        </span>
+                        {dayEntries.length > 0 && (
+                          <div className="flex gap-0.5">
+                            {dayEntries.slice(0, 3).map((e, ei) => (
+                              <span key={ei} className={`w-1 h-1 rounded-full ${isSelected ? 'bg-white/70' : MEAL_COLORS_MOBILE[e.meal_type]?.dot ?? 'bg-gray-400'}`} />
+                            ))}
+                          </div>
+                        )}
+                      </button>
+                    );
+                  })}
                 </div>
-              ))}
-            </div>
 
-            {MEAL_TYPES.map((mealType) => (
-              <div key={mealType} className="grid grid-cols-8 gap-2 mb-2">
-                <div className="flex items-center">
-                  <span className="text-xs font-medium text-[var(--text-muted)] capitalize">{mealType}</span>
+                {/* Selected day meals */}
+                <div className="px-4 space-y-2 pb-4">
+                  <p className="text-sm font-semibold text-[var(--text)] mb-3">
+                    {format(new Date(selectedDay + 'T00:00'), 'EEEE, MMMM d')}
+                  </p>
+                  {MEAL_TYPES.map((mealType) => {
+                    const entry = getEntry(selectedDay, mealType);
+                    const colors = MEAL_COLORS_MOBILE[mealType];
+                    return (
+                      <div key={mealType} className="rounded-2xl border border-[var(--border)] overflow-hidden"
+                        style={{ background: 'var(--surface)' }}>
+                        {/* Meal type header */}
+                        <div className="flex items-center justify-between px-4 py-2.5 border-b border-[var(--border)]"
+                          style={{ background: 'var(--surface-2)' }}>
+                          <div className="flex items-center gap-2">
+                            <span className={`w-2 h-2 rounded-full ${colors.dot}`} />
+                            <span className={`text-xs font-bold uppercase tracking-wider ${colors.text}`}>
+                              {mealType}
+                            </span>
+                          </div>
+                          {!entry && (
+                            <button
+                              onClick={() => setAddModal({ date: selectedDay, mealType })}
+                              className={`flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-lg ${colors.bg} ${colors.text}`}
+                            >
+                              <Plus size={12} /> Add
+                            </button>
+                          )}
+                        </div>
+
+                        {entry ? (
+                          <div className="px-4 py-3">
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-semibold text-[var(--text)] truncate">{entry.recipe?.name}</p>
+                                {entry.recipe && (() => {
+                                  const m = calcRecipeMacros(entry.recipe.ingredients, entry.servings);
+                                  return (
+                                    <p className="text-xs text-[var(--text-muted)] mt-0.5">
+                                      {Math.round(m.calories)} cal · {roundMacro(m.protein)}g protein
+                                    </p>
+                                  );
+                                })()}
+                              </div>
+                              <div className="flex items-center gap-1 shrink-0">
+                                <button
+                                  onClick={() => handleServingChange(entry.id, Math.max(0.5, entry.servings - 0.5))}
+                                  className="w-8 h-8 flex items-center justify-center rounded-xl border border-[var(--border)] text-[var(--text-muted)] active:bg-[var(--surface-2)]"
+                                >
+                                  <ChevronDown size={14} />
+                                </button>
+                                <span className="text-sm font-bold text-[var(--primary)] w-8 text-center">{entry.servings}x</span>
+                                <button
+                                  onClick={() => handleServingChange(entry.id, entry.servings + 0.5)}
+                                  className="w-8 h-8 flex items-center justify-center rounded-xl border border-[var(--border)] text-[var(--text-muted)] active:bg-[var(--surface-2)]"
+                                >
+                                  <ChevronUp size={14} />
+                                </button>
+                                <button
+                                  onClick={() => handleRemove(entry.id)}
+                                  className="w-8 h-8 flex items-center justify-center rounded-xl text-[var(--text-muted)] active:text-red-400 active:bg-red-500/10"
+                                >
+                                  <X size={14} />
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => setAddModal({ date: selectedDay, mealType })}
+                            className="w-full px-4 py-4 flex items-center gap-2 text-[var(--text-muted)] active:bg-[var(--surface-2)]"
+                          >
+                            <Plus size={15} />
+                            <span className="text-sm">Add {mealType}</span>
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
-                {weekDates.map((date, i) => {
-                  const dateStr = formatDate(date);
-                  const entry = getEntry(dateStr, mealType);
-                  return (
-                    <MealSlot
-                      key={i}
-                      date={dateStr}
-                      mealType={mealType}
-                      entry={entry}
-                      onAdd={(d, mt) => setAddModal({ date: d, mealType: mt })}
-                      onRemove={handleRemove}
-                      onServingChange={handleServingChange}
-                      onViewDetail={(e) => setDetailEntry(e)}
-                    />
-                  );
-                })}
               </div>
-            ))}
-          </div>
-        </div>
-          </>
+
+              {/* ── Desktop Grid View (hidden on mobile) ── */}
+              <div className="hidden md:block px-6 pb-6">
+                {entries.length === 0 && (
+                  <div className="mb-4 rounded-2xl border border-[var(--primary)]/20 px-4 py-3 flex items-center gap-3"
+                    style={{ background: 'rgba(16,185,129,0.05)' }}>
+                    <span className="text-xl shrink-0">👆</span>
+                    <p className="text-sm text-[var(--text-muted)]">
+                      <span className="font-semibold text-[var(--text)]">Click any cell</span> to add a meal.
+                    </p>
+                  </div>
+                )}
+                <div className="overflow-x-auto">
+                  <div className="min-w-[640px]">
+                    <div className="grid grid-cols-8 gap-2 mb-2">
+                      <div />
+                      {weekDates.map((date, i) => (
+                        <div key={i} className={`text-center py-2 rounded-xl ${isToday(date) ? 'bg-[var(--primary)]/10' : ''}`}>
+                          <p className="text-xs text-[var(--text-muted)]">{DAY_LABELS[i]}</p>
+                          <p className={`text-base font-bold ${isToday(date) ? 'text-[var(--primary)]' : 'text-[var(--text)]'}`}>
+                            {format(date, 'd')}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                    {MEAL_TYPES.map((mealType) => (
+                      <div key={mealType} className="grid grid-cols-8 gap-2 mb-2">
+                        <div className="flex items-center">
+                          <span className="text-xs font-medium text-[var(--text-muted)] capitalize">{mealType}</span>
+                        </div>
+                        {weekDates.map((date, i) => {
+                          const dateStr = formatDate(date);
+                          const entry = getEntry(dateStr, mealType);
+                          return (
+                            <MealSlot
+                              key={i}
+                              date={dateStr}
+                              mealType={mealType}
+                              entry={entry}
+                              onAdd={(d, mt) => setAddModal({ date: d, mealType: mt })}
+                              onRemove={handleRemove}
+                              onServingChange={handleServingChange}
+                              onViewDetail={(e) => setDetailEntry(e)}
+                            />
+                          );
+                        })}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </>
           )}
         </>
       )}
