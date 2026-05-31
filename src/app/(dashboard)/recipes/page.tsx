@@ -73,20 +73,22 @@ export default function RecipesPage() {
   }
 
   return (
-    <div className="p-6 max-w-5xl mx-auto">
-      <div className="flex items-center justify-between mb-6 gap-4">
-        <div>
+    <div className="p-4 md:p-6 max-w-5xl mx-auto">
+      <div className="flex items-center justify-between mb-5 gap-3">
+        <div className="min-w-0">
           <h1 className="text-2xl font-bold text-[var(--text)]">Recipes</h1>
-          <p className="text-sm text-[var(--text-muted)] mt-0.5">{recipes.length} recipe{recipes.length !== 1 ? 's' : ''} saved</p>
+          <p className="text-sm text-[var(--text-muted)] mt-0.5">{recipes.length} saved</p>
         </div>
-        <div className="flex items-center gap-2">
-          <Button variant="secondary" onClick={handleSeedTemplates} loading={seeding}>
-            <Download size={15} />
-            {seeding ? 'Loading…' : 'Browse Recipe Library'}
+        <div className="flex items-center gap-2 shrink-0">
+          <Button variant="secondary" size="sm" onClick={handleSeedTemplates} loading={seeding}>
+            <Download size={14} />
+            <span className="hidden sm:inline">{seeding ? 'Loading…' : 'Browse Library'}</span>
+            <span className="sm:hidden">{seeding ? '…' : 'Library'}</span>
           </Button>
-          <Button onClick={() => setShowBuilder(true)}>
-            <Plus size={16} />
-            New Recipe
+          <Button size="sm" onClick={() => setShowBuilder(true)}>
+            <Plus size={15} />
+            <span className="hidden sm:inline">New Recipe</span>
+            <span className="sm:hidden">New</span>
           </Button>
         </div>
       </div>

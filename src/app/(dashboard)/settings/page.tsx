@@ -4,7 +4,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import {
   Crown, Check, AlertCircle, Sparkles, ShoppingCart, BookOpen,
   FileDown, Headphones, Zap, Star, ChevronDown, ChevronUp,
-  Shield, Clock, Users, ChefHat, LayoutGrid, Share2, Printer, ArrowRight, LogOut,
+  Shield, Clock, Users, ChefHat, LayoutGrid, Share2, Printer, ArrowRight, LogOut, CreditCard,
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import Link from 'next/link';
@@ -198,6 +198,8 @@ export default function SettingsPage() {
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   const [userEmail, setUserEmail] = useState('');
   const [signingOut, setSigningOut] = useState(false);
+  const [portalLoading, setPortalLoading] = useState(false);
+  const [portalError, setPortalError] = useState('');
 
   useEffect(() => {
     if (justUpgraded) {
@@ -234,6 +236,21 @@ export default function SettingsPage() {
     const supabase = createClient();
     await supabase.auth.signOut();
     router.push('/login');
+  }
+
+  async function handleManageSubscription() {
+    setPortalLoading(true);
+    setPortalError('');
+    try {
+      const res = await fetch('/api/stripe/portal', { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? 'Could not open billing portal.');
+      window.location.href = data.url;
+    } catch (err) {
+      setPortalError(err instanceof Error ? err.message : 'Something went wrong.');
+    } finally {
+      setPortalLoading(false);
+    }
   }
 
   async function handleUpgrade() {
@@ -352,6 +369,33 @@ export default function SettingsPage() {
                 Start with <span className="font-semibold text-[var(--text)]">AI Meal Suggestions</span> on the Calendar —
                 it fills your whole week in one shot, then your grocery list builds itself automatically.
               </p>
+            </div>
+          </div>
+
+          {/* Manage subscription */}
+          <div className="rounded-2xl border border-[var(--border)] overflow-hidden" style={{ background: 'var(--surface)' }}>
+            <div className="px-5 py-4 border-b border-[var(--border)]" style={{ background: 'var(--surface-2)' }}>
+              <p className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider">Subscription</p>
+            </div>
+            <div className="p-5">
+              <p className="text-sm text-[var(--text-muted)] mb-4 leading-relaxed">
+                Cancel, pause, or update your payment method through the Stripe billing portal.
+              </p>
+              {portalError && (
+                <p className="text-xs text-red-400 mb-3">{portalError}</p>
+              )}
+              <button
+                onClick={handleManageSubscription}
+                disabled={portalLoading}
+                className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--surface-2)] transition-all disabled:opacity-50"
+              >
+                {portalLoading ? (
+                  <span className="w-4 h-4 border-2 border-[var(--border-2)] border-t-[var(--primary)] rounded-full animate-spin" />
+                ) : (
+                  <CreditCard size={14} />
+                )}
+                {portalLoading ? 'Opening portal…' : 'Manage Subscription'}
+              </button>
             </div>
           </div>
 
