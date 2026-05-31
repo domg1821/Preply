@@ -27,99 +27,19 @@ workflows:
       - name: Set up keychain and code signing
         script: |
           keychain initialize
-
-          # Write certificate private key from environment variable
           echo "$CERTIFICATE_PRIVATE_KEY" > /tmp/distribution_key.pem
-
-          # Fetch the distribution certificate from App Store Connect
           app-store-connect fetch-signing-files "$BUNDLE_ID" \
             --type IOS_APP_STORE \
-            --create \
-            --verbose
-
-          # Find the downloaded cert and combine with our private key
-          CERT_PATH=$(ls ~/Library/MobileDevice/Provisioning\ Profiles/../Certificates/*.cer 2>/dev/null | head -1 || \
-                      ls ~/Library/Developer/Xcode/UserData/Certificates/*.cer 2>/dev/null | head -1 || \
-                      find ~ -name "*.cer" -newer /tmp/distribution_key.pem 2>/dev/null | head -1)
-
-          echo "Cert path: $CERT_PATH"
-
-          if [ -n "$CERT_PATH" ]; then
-            openssl x509 -in "$CERT_PATH" -inform DER -out /tmp/distribution.crt
-            openssl pkcs12 -export \
-              -out /tmp/distribution.p12 \
-              -inkey /tmp/distribution_key.pem \
-              -in /tmp/distribution.crt \
-              -passout pass:
-            security import /tmp/distribution.p12 -k ~/Library/codemagic-cli-tools/keychains/*.keychain-db -P "" -T /usr/bin/codesign
-          fi
-
+            --create
           keychain add-certificates
-          xcode-project use-profiles --verbose
-
-      - name: List profiles and certs
-        script: |
-          echo "=== Profiles ==="
-          ls ~/Library/MobileDevice/Provisioning\ Profiles/ 2>/dev/null || echo "EMPTY"
-          echo "=== Identities ==="
-          security find-identity -v -p codesigning
+          xcode-project use-profiles
 
       - name: Build .ipa
         script: |
-          WORKSPACE=$(find ios -name "*.xcworkspace" | grep -v "xcodeproj" | head -1)
-          if [ -z "$WORKSPACE" ]; then
-            WORKSPACE=$(find ios -name "*.xcworkspace" | head -1)
-          fi
-          echo "Using workspace: $WORKSPACE"
-
-          PROFILE_PATH=$(ls ~/Library/MobileDevice/Provisioning\ Profiles/*.mobileprovision 2>/dev/null | head -1)
-          echo "Profile: $PROFILE_PATH"
-
-          if [ -z "$PROFILE_PATH" ]; then
-            echo "ERROR: No provisioning profile found"
-            exit 1
-          fi
-
-          PROFILE_UUID=$(security cms -D -i "$PROFILE_PATH" | plutil -extract UUID raw -)
-          echo "UUID: $PROFILE_UUID"
-
-          IDENTITY=$(security find-identity -v -p codesigning | grep "iPhone Distribution" | head -1 | awk '{print $2}')
-          echo "Identity: $IDENTITY"
-
-          xcodebuild \
-            -workspace "$WORKSPACE" \
-            -scheme App \
-            -config Release \
-            -archivePath build/ios/xcarchive/App.xcarchive \
-            archive \
-            CODE_SIGN_STYLE=Manual \
-            DEVELOPMENT_TEAM="$APPLE_TEAM_ID" \
-            CODE_SIGN_IDENTITY="iPhone Distribution" \
-            PROVISIONING_PROFILE="$PROFILE_UUID" \
-            2>&1 | tail -20
-
-          xcodebuild \
-            -exportArchive \
-            -archivePath build/ios/xcarchive/App.xcarchive \
-            -exportOptionsPlist /dev/stdin \
-            -exportPath build/ios/ipa \
-            <<EOF
-          <?xml version="1.0" encoding="UTF-8"?>
-          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-          <plist version="1.0">
-          <dict>
-            <key>method</key>
-            <string>app-store-connect</string>
-            <key>teamID</key>
-            <string>$APPLE_TEAM_ID</string>
-            <key>provisioningProfiles</key>
-            <dict>
-              <key>$BUNDLE_ID</key>
-              <string>$PROFILE_UUID</string>
-            </dict>
-          </dict>
-          </plist>
-          EOF
+          xcode-project build-ipa \
+            --workspace ios/App/App.xcodeproj/project.xcworkspace \
+            --scheme App \
+            --config Release
 
     artifacts:
       - build/ios/ipa/*.ipa
