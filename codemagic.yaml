@@ -7,7 +7,7 @@ workflows:
         - app_store_credentials
         - preply_secrets
       vars:
-        BUILD_NUMBER: 8
+        BUILD_NUMBER: 9
       node: v22
       xcode: latest
       cocoapods: default
@@ -25,6 +25,15 @@ workflows:
 
       - name: Sync Capacitor plugins to iOS
         script: npx cap sync ios
+
+      - name: Generate app icons
+        script: |
+          npm install -g @capacitor/assets
+          npx @capacitor/assets generate --ios \
+            --iconBackgroundColor '#10B981' \
+            --iconBackgroundColorDark '#10B981' \
+            --splashBackgroundColor '#0E1117' \
+            --splashBackgroundColorDark '#0E1117'
 
       - name: Set up keychain and code signing
         script: |
