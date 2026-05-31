@@ -7,7 +7,7 @@ workflows:
         - app_store_credentials
         - preply_secrets
       vars:
-        BUILD_NUMBER: 7
+        BUILD_NUMBER: 8
       node: v22
       xcode: latest
       cocoapods: default
