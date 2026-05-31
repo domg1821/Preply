@@ -6,6 +6,8 @@ workflows:
       groups:
         - app_store_credentials
         - preply_secrets
+      vars:
+        BUILD_NUMBER: 2
       node: v22
       xcode: latest
       cocoapods: default
@@ -36,10 +38,9 @@ workflows:
 
       - name: Set build number
         script: |
-          BUILD_NUMBER=$(app-store-connect get-latest-testflight-build-number "$BUNDLE_ID" --platform IOS 2>/dev/null || echo "1")
-          BUILD_NUMBER=$((BUILD_NUMBER + 1))
           echo "Setting build number to $BUILD_NUMBER"
           /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $BUILD_NUMBER" ios/App/App/Info.plist
+          /usr/libexec/PlistBuddy -c "Print :CFBundleVersion" ios/App/App/Info.plist
 
       - name: Build .ipa
         script: |
