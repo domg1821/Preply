@@ -1,6 +1,9 @@
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 
+// 400 days — keep auth cookies alive so mobile users stay signed in until logout.
+const COOKIE_MAX_AGE = 60 * 60 * 24 * 400;
+
 export async function createClient() {
   const cookieStore = await cookies();
   return createServerClient(
@@ -12,7 +15,7 @@ export async function createClient() {
         setAll: (cookiesToSet) => {
           try {
             cookiesToSet.forEach(({ name, value, options }) =>
-              cookieStore.set(name, value, options)
+              cookieStore.set(name, value, { ...options, maxAge: COOKIE_MAX_AGE })
             );
           } catch {}
         },

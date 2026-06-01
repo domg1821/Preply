@@ -245,7 +245,11 @@ export default function SettingsPage() {
       const res = await fetch('/api/stripe/portal', { method: 'POST' });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? 'Could not open billing portal.');
-      window.location.href = data.url;
+      if (!data.url || !data.url.startsWith('https://')) {
+        throw new Error('Invalid portal URL received. Please try again.');
+      }
+      const { openUrl } = await import('@/lib/capacitor');
+      await openUrl(data.url);
     } catch (err) {
       setPortalError(err instanceof Error ? err.message : 'Something went wrong.');
     } finally {
