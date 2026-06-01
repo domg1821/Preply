@@ -7,47 +7,41 @@ workflows:
         - app_store_credentials
         - preply_secrets
       vars:
-        BUILD_NUMBER: 12
+        BUILD_NUMBER: 13
       xcode: latest
       cocoapods: default
     scripts:
-      - name: Install Node 22 via nvm
+      - name: Prepare Node 22
         script: |
           export NVM_DIR="$HOME/.nvm"
           [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
-          nvm install 22
+          # Use any already-installed v22; only download if none present
+          nvm use 22 2>/dev/null || nvm install 22
           nvm alias default 22
+          echo "source $NVM_DIR/nvm.sh && nvm use 22 >/dev/null 2>&1" > ~/.node_env
           node --version
 
       - name: Install Node dependencies
         script: |
-          export NVM_DIR="$HOME/.nvm"
-          [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
-          nvm use 22
+          source ~/.node_env
           npm install
           npm install -g @capacitor/cli @capacitor/assets
 
       - name: Create iOS project if it doesn't exist
         script: |
-          export NVM_DIR="$HOME/.nvm"
-          [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
-          nvm use 22
+          source ~/.node_env
           if [ ! -d "ios" ]; then
             npx cap add ios
           fi
 
       - name: Sync Capacitor plugins to iOS
         script: |
-          export NVM_DIR="$HOME/.nvm"
-          [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
-          nvm use 22
+          source ~/.node_env
           npx cap sync ios
 
       - name: Generate app icons
         script: |
-          export NVM_DIR="$HOME/.nvm"
-          [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
-          nvm use 22
+          source ~/.node_env
           npx @capacitor/assets generate --ios \
             --iconBackgroundColor '#10B981' \
             --iconBackgroundColorDark '#10B981' \

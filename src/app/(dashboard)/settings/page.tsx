@@ -9,6 +9,7 @@ import {
 import { Button } from '@/components/ui/Button';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
+import { useIsNative } from '@/lib/useIsNative';
 
 const PREMIUM_FEATURES = [
   {
@@ -189,6 +190,7 @@ const PREMIUM_FEATURES_HUB = [
 export default function SettingsPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
+  const native = useIsNative();
   const justUpgraded = searchParams.get('success') === 'true';
 
   const [plan, setPlan] = useState<'monthly' | 'yearly'>('yearly');
@@ -376,36 +378,51 @@ export default function SettingsPage() {
             </div>
           </div>
 
-          {/* Manage subscription */}
-          <div className="rounded-2xl border border-[var(--border)] overflow-hidden" style={{ background: 'var(--surface)' }}>
-            <div className="px-5 py-4 border-b border-[var(--border)]" style={{ background: 'var(--surface-2)' }}>
-              <p className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider">Subscription</p>
-            </div>
-            <div className="p-5">
-              <p className="text-sm text-[var(--text-muted)] mb-4 leading-relaxed">
-                Cancel, pause, or update your payment method through the Stripe billing portal.
-              </p>
-              {portalError && (
-                <p className="text-xs text-red-400 mb-3">{portalError}</p>
-              )}
-              <button
-                onClick={handleManageSubscription}
-                disabled={portalLoading}
-                className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--surface-2)] transition-all disabled:opacity-50"
-              >
-                {portalLoading ? (
-                  <span className="w-4 h-4 border-2 border-[var(--border-2)] border-t-[var(--primary)] rounded-full animate-spin" />
-                ) : (
-                  <CreditCard size={14} />
+          {/* Manage subscription — hidden in the iOS app (Stripe portal is web-only) */}
+          {!native && (
+            <div className="rounded-2xl border border-[var(--border)] overflow-hidden" style={{ background: 'var(--surface)' }}>
+              <div className="px-5 py-4 border-b border-[var(--border)]" style={{ background: 'var(--surface-2)' }}>
+                <p className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider">Subscription</p>
+              </div>
+              <div className="p-5">
+                <p className="text-sm text-[var(--text-muted)] mb-4 leading-relaxed">
+                  Cancel, pause, or update your payment method through the Stripe billing portal.
+                </p>
+                {portalError && (
+                  <p className="text-xs text-red-400 mb-3">{portalError}</p>
                 )}
-                {portalLoading ? 'Opening portal…' : 'Manage Subscription'}
-              </button>
+                <button
+                  onClick={handleManageSubscription}
+                  disabled={portalLoading}
+                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--surface-2)] transition-all disabled:opacity-50"
+                >
+                  {portalLoading ? (
+                    <span className="w-4 h-4 border-2 border-[var(--border-2)] border-t-[var(--primary)] rounded-full animate-spin" />
+                  ) : (
+                    <CreditCard size={14} />
+                  )}
+                  {portalLoading ? 'Opening portal…' : 'Manage Subscription'}
+                </button>
+              </div>
             </div>
-          </div>
+          )}
 
         </div>
+      ) : native ? (
+        /* ── iOS free experience — no external purchase UI (Apple 3.1.1) ── */
+        <div className="mb-6">
+          <div className="rounded-2xl border border-[var(--border)] p-6 text-center" style={{ background: 'var(--surface)' }}>
+            <div className="w-12 h-12 rounded-2xl bg-[var(--primary)]/10 flex items-center justify-center mx-auto mb-3">
+              <ChefHat size={22} className="text-[var(--primary)]" />
+            </div>
+            <p className="text-base font-semibold text-[var(--text)] mb-1">You&apos;re all set</p>
+            <p className="text-sm text-[var(--text-muted)] max-w-xs mx-auto">
+              Plan meals, track macros, build grocery lists, and create event menus — all free.
+            </p>
+          </div>
+        </div>
       ) : (
-        /* ── Premium Upgrade Section ── */
+        /* ── Premium Upgrade Section (web only) ── */
         <div className="mb-6 space-y-4">
 
           {/* Hero */}

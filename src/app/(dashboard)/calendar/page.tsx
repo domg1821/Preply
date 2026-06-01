@@ -10,6 +10,7 @@ import { MealPlanEntry, MealType, Recipe, FoodItem } from '@/types';
 import { formatDate, getMondayOfWeek, getWeekDates, roundMacro, calcRecipeMacros } from '@/lib/utils';
 import { format, isToday } from 'date-fns';
 import { createClient } from '@/lib/supabase/client';
+import { useIsNative } from '@/lib/useIsNative';
 import Link from 'next/link';
 
 const MEAL_TYPES: MealType[] = ['breakfast', 'lunch', 'dinner', 'snack'];
@@ -37,6 +38,7 @@ const SUGGEST_MEAL_ORDER: Record<string, number> = { breakfast: 0, lunch: 1, din
 
 export default function CalendarPage() {
   const router = useRouter();
+  const native = useIsNative();
   const [weekStart, setWeekStart] = useState(() => getMondayOfWeek(new Date()));
   const [entries, setEntries] = useState<MealPlanEntry[]>([]);
   const [recipes, setRecipes] = useState<Recipe[]>([]);
@@ -497,7 +499,7 @@ export default function CalendarPage() {
       />
 
       {/* Premium Gate Modal */}
-      {showPremiumGate && (
+      {showPremiumGate && !native && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowPremiumGate(false)} />
           <div className="relative w-full max-w-sm rounded-2xl overflow-hidden shadow-2xl"

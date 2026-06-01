@@ -9,6 +9,7 @@ import {
 import { createClient } from '@/lib/supabase/client';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
 import { openUrl, copyToClipboard, isNative } from '@/lib/capacitor';
+import { useIsNative } from '@/lib/useIsNative';
 import { Recipe } from '@/types';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -419,6 +420,7 @@ function exportMenuPDF(event: EventMenu, ingredients: AggregatedIngredient[]) {
 // ─── Component ───────────────────────────────────────────────────────────────
 
 export default function EventsPage() {
+  const native = useIsNative();
   const [events, setEvents] = useState<EventMenu[]>([]);
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -616,8 +618,8 @@ export default function EventsPage() {
             </button>
           </div>
 
-          {/* Pro callout for free users */}
-          {!isPremium && (
+          {/* Pro callout for free users — hidden in the iOS app (no external purchase) */}
+          {!isPremium && !native && (
             <div className="rounded-2xl border border-amber-500/20 p-4 mb-5 flex items-start gap-3 no-print"
               style={{ background: 'linear-gradient(135deg, rgba(245,158,11,0.06), rgba(245,158,11,0.02))' }}>
               <div className="w-9 h-9 rounded-xl bg-amber-500/15 flex items-center justify-center shrink-0 mt-0.5">
@@ -927,7 +929,8 @@ export default function EventsPage() {
         {/* Actions */}
         {selectedEvent.recipes.length > 0 && (
           <div className="px-4 md:px-6 no-print space-y-3">
-            {/* Export PDF — Pro feature */}
+            {/* Export PDF — Pro feature. On iOS, only show to premium users (no upsell). */}
+            {(isPremium || !native) && (
             <div className="rounded-2xl border overflow-hidden"
               style={{ background: 'var(--surface)', borderColor: isPremium ? 'var(--border)' : 'rgba(245,158,11,0.25)' }}>
               <div className="px-4 py-3 border-b border-[var(--border)] flex items-center justify-between"
@@ -967,6 +970,7 @@ export default function EventsPage() {
                 )}
               </div>
             </div>
+            )}
 
             {/* Secondary actions */}
             <div className="flex flex-wrap gap-2">
@@ -1021,7 +1025,7 @@ export default function EventsPage() {
       )}
 
       {/* Pro Gate Modal */}
-      {showProGate && (
+      {showProGate && !native && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowProGate(false)} />
           <div className="relative w-full max-w-sm rounded-2xl overflow-hidden shadow-2xl"

@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase/client';
 import { OnboardingModal } from '@/components/onboarding/OnboardingModal';
 import { MealPlanEntry, Profile } from '@/types';
 import { getMondayOfWeek, getWeekDates, formatDate, calcRecipeMacros } from '@/lib/utils';
+import { useIsNative } from '@/lib/useIsNative';
 
 const MEAL_ORDER = ['breakfast', 'lunch', 'dinner', 'snack'] as const;
 
@@ -129,6 +130,7 @@ const MEAL_COLORS: Record<string, string> = {
 const DAY_LABELS_SHORT = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
 export default function HomePage() {
+  const native = useIsNative();
   const today = format(new Date(), 'yyyy-MM-dd');
   const displayDate = format(new Date(), 'EEEE, MMMM d');
   const monday = getMondayOfWeek(new Date());
@@ -334,9 +336,11 @@ export default function HomePage() {
             { href: '/calendar', label: 'Plan This Week', desc: 'Add meals to your calendar', color: 'text-[var(--primary)]', bg: 'bg-emerald-500/10', Icon: CalendarDays, premium: false },
             { href: '/grocery', label: 'Grocery List', desc: 'See what you need to buy', color: 'text-amber-400', bg: 'bg-amber-500/10', Icon: ShoppingCart, premium: false },
             { href: '/recipes', label: 'My Recipes', desc: 'Browse & build recipes', color: 'text-blue-400', bg: 'bg-blue-500/10', Icon: BookOpen, premium: false },
-            ...(!profile?.is_premium
-              ? [{ href: '/settings', label: 'Upgrade to Premium', desc: 'AI meal plans from $3.50/mo', color: 'text-amber-400', bg: 'bg-amber-500/10', Icon: Crown, premium: false }]
-              : [{ href: '/settings', label: 'Premium Features', desc: '6 features unlocked — tap to explore', color: 'text-amber-400', bg: 'bg-amber-500/10', Icon: Crown, premium: true }]),
+            ...(profile?.is_premium
+              ? [{ href: '/settings', label: 'Premium Features', desc: '6 features unlocked — tap to explore', color: 'text-amber-400', bg: 'bg-amber-500/10', Icon: Crown, premium: true }]
+              : native
+                ? [{ href: '/recipes', label: 'Recipe Library', desc: 'Browse 500+ starter meals', color: 'text-amber-400', bg: 'bg-amber-500/10', Icon: BookOpen, premium: false }]
+                : [{ href: '/settings', label: 'Upgrade to Premium', desc: 'AI meal plans from $3.50/mo', color: 'text-amber-400', bg: 'bg-amber-500/10', Icon: Crown, premium: false }]),
           ].map(({ href, label, desc, color, bg, Icon, premium: isPremiumTile }) => (
             <Link
               key={href}
