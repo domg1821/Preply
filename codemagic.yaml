@@ -7,28 +7,47 @@ workflows:
         - app_store_credentials
         - preply_secrets
       vars:
-        BUILD_NUMBER: 11
-      node: 22.11.0
+        BUILD_NUMBER: 12
       xcode: latest
       cocoapods: default
     scripts:
+      - name: Install Node 22 via nvm
+        script: |
+          export NVM_DIR="$HOME/.nvm"
+          [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+          nvm install 22
+          nvm alias default 22
+          node --version
+
       - name: Install Node dependencies
         script: |
+          export NVM_DIR="$HOME/.nvm"
+          [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+          nvm use 22
           npm install
-          npm install -g @capacitor/cli
+          npm install -g @capacitor/cli @capacitor/assets
 
       - name: Create iOS project if it doesn't exist
         script: |
+          export NVM_DIR="$HOME/.nvm"
+          [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+          nvm use 22
           if [ ! -d "ios" ]; then
             npx cap add ios
           fi
 
       - name: Sync Capacitor plugins to iOS
-        script: npx cap sync ios
+        script: |
+          export NVM_DIR="$HOME/.nvm"
+          [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+          nvm use 22
+          npx cap sync ios
 
       - name: Generate app icons
         script: |
-          npm install -g @capacitor/assets
+          export NVM_DIR="$HOME/.nvm"
+          [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+          nvm use 22
           npx @capacitor/assets generate --ios \
             --iconBackgroundColor '#10B981' \
             --iconBackgroundColorDark '#10B981' \
