@@ -4,12 +4,13 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import {
   Crown, Check, AlertCircle, Sparkles, ShoppingCart, BookOpen,
   FileDown, Headphones, Zap, Star, ChevronDown, ChevronUp,
-  Shield, Clock, Users, ChefHat, LayoutGrid, Share2, Printer, ArrowRight, LogOut, CreditCard,
+  Shield, Clock, Users, ChefHat, LayoutGrid, Share2, Printer, ArrowRight, LogOut, CreditCard, Trash2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { useIsNative } from '@/lib/useIsNative';
+import IAPPaywall from '@/components/IAPPaywall';
 
 const PREMIUM_FEATURES = [
   {
@@ -202,6 +203,9 @@ export default function SettingsPage() {
   const [signingOut, setSigningOut] = useState(false);
   const [portalLoading, setPortalLoading] = useState(false);
   const [portalError, setPortalError] = useState('');
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [deleteError, setDeleteError] = useState('');
 
   useEffect(() => {
     if (justUpgraded) {
@@ -224,20 +228,48 @@ export default function SettingsPage() {
     }
 
     const supabase = createClient();
-    supabase.auth.getUser().then(({ data: { user } }) => {
+    supabase.auth.getUser().then(async ({ data: { user } }) => {
       if (!user) return;
       setUserEmail(user.email ?? '');
       supabase.from('profiles').select('is_premium').eq('id', user.id).single().then(({ data }) => {
         if (data?.is_premium) setIsPremium(true);
       });
+
+      // Configure RevenueCat for IAP on iOS
+      if (native) {
+        try {
+          const { configureRevenueCat } = await import('@/lib/revenuecat');
+          await configureRevenueCat(user.id);
+        } catch (e) {
+          console.warn('[settings] RevenueCat configure failed:', e);
+        }
+      }
     });
-  }, [justUpgraded, searchParams]);
+  }, [justUpgraded, searchParams, native]);
 
   async function handleSignOut() {
     setSigningOut(true);
     const supabase = createClient();
     await supabase.auth.signOut();
     router.push('/login');
+  }
+
+  async function handleDeleteAccount() {
+    setDeleteLoading(true);
+    setDeleteError('');
+    try {
+      const supabase = createClient();
+      const res = await fetch('/api/account/delete', { method: 'DELETE' });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error ?? 'Could not delete account.');
+      }
+      await supabase.auth.signOut();
+      router.push('/login');
+    } catch (err) {
+      setDeleteError(err instanceof Error ? err.message : 'Something went wrong.');
+      setDeleteLoading(false);
+    }
   }
 
   async function handleManageSubscription() {
@@ -409,18 +441,8 @@ export default function SettingsPage() {
 
         </div>
       ) : native ? (
-        /* ── iOS free experience — no external purchase UI (Apple 3.1.1) ── */
-        <div className="mb-6">
-          <div className="rounded-2xl border border-[var(--border)] p-6 text-center" style={{ background: 'var(--surface)' }}>
-            <div className="w-12 h-12 rounded-2xl bg-[var(--primary)]/10 flex items-center justify-center mx-auto mb-3">
-              <ChefHat size={22} className="text-[var(--primary)]" />
-            </div>
-            <p className="text-base font-semibold text-[var(--text)] mb-1">You&apos;re all set</p>
-            <p className="text-sm text-[var(--text-muted)] max-w-xs mx-auto">
-              Plan meals, track macros, build grocery lists, and create event menus — all free.
-            </p>
-          </div>
-        </div>
+        /* ── iOS free — show IAP paywall (Apple 3.1.1 compliant) ── */
+        <IAPPaywall onPremiumActivated={() => setIsPremium(true)} />
       ) : (
         /* ── Premium Upgrade Section (web only) ── */
         <div className="mb-6 space-y-4">
@@ -713,6 +735,52 @@ export default function SettingsPage() {
             <LogOut size={14} />
             {signingOut ? 'Signing out…' : 'Sign out'}
           </button>
+        </div>
+
+        {/* Delete Account */}
+        <div className="px-6 pb-6">
+          <div className="border-t border-[var(--border)] pt-5">
+            {!showDeleteConfirm ? (
+              <button
+                onClick={() => setShowDeleteConfirm(true)}
+                className="flex items-center gap-2 text-sm text-[var(--text-muted)] hover:text-red-400 transition-colors"
+              >
+                <Trash2 size={14} />
+                Delete account
+              </button>
+            ) : (
+              <div className="rounded-xl border border-red-500/25 bg-red-500/5 p-4">
+                <p className="text-sm font-semibold text-red-400 mb-1">Delete your account?</p>
+                <p className="text-xs text-[var(--text-muted)] mb-4 leading-relaxed">
+                  This permanently deletes all your recipes, meal plans, grocery lists, and account data. This cannot be undone.
+                </p>
+                {deleteError && (
+                  <p className="text-xs text-red-400 mb-3">{deleteError}</p>
+                )}
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={handleDeleteAccount}
+                    disabled={deleteLoading}
+                    className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium bg-red-500 text-white hover:bg-red-600 transition-all disabled:opacity-50"
+                  >
+                    {deleteLoading ? (
+                      <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    ) : (
+                      <Trash2 size={13} />
+                    )}
+                    {deleteLoading ? 'Deleting…' : 'Yes, delete my account'}
+                  </button>
+                  <button
+                    onClick={() => { setShowDeleteConfirm(false); setDeleteError(''); }}
+                    disabled={deleteLoading}
+                    className="text-sm text-[var(--text-muted)] hover:text-[var(--text)] transition-colors disabled:opacity-50"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>
