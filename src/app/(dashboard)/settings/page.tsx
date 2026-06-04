@@ -251,7 +251,7 @@ export default function SettingsPage() {
     setSigningOut(true);
     const supabase = createClient();
     await supabase.auth.signOut();
-    router.push('/login');
+    window.location.href = '/login';
   }
 
   async function handleDeleteAccount() {
@@ -265,7 +265,7 @@ export default function SettingsPage() {
         throw new Error(data.error ?? 'Could not delete account.');
       }
       await supabase.auth.signOut();
-      router.push('/login');
+      window.location.href = '/login';
     } catch (err) {
       setDeleteError(err instanceof Error ? err.message : 'Something went wrong.');
       setDeleteLoading(false);

@@ -12,8 +12,8 @@
  */
 
 export const RC_ENTITLEMENT = "premium";
-export const RC_PRODUCT_MONTHLY = "com.preply.premium.monthly";
-export const RC_PRODUCT_YEARLY  = "com.preply.premium.yearly";
+export const RC_PRODUCT_MONTHLY = "com.dominicgeraci.preply.premium.monthly";
+export const RC_PRODUCT_YEARLY  = "com.dominicgeraci.preply.premium.yearly";
 
 export interface RCPackage {
   identifier: string;
