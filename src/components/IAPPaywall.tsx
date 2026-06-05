@@ -41,26 +41,39 @@ export default function IAPPaywall({ onPremiumActivated }: Props) {
   }, []);
 
   const handlePurchase = useCallback(async () => {
-    // Use offering package if available, otherwise build a minimal package from known product IDs
-    let pkg: RCPackage | null = offering
+    const pkg: RCPackage | null = offering
       ? (plan === 'yearly' ? offering.yearly : offering.monthly)
       : null;
 
+    // If no offering loaded, purchase directly by product ID
     if (!pkg) {
       const { RC_PRODUCT_MONTHLY, RC_PRODUCT_YEARLY } = await import('@/lib/revenuecat');
+      const { Purchases } = await import('@revenuecat/purchases-capacitor');
       const productId = plan === 'yearly' ? RC_PRODUCT_YEARLY : RC_PRODUCT_MONTHLY;
-      pkg = {
-        identifier: plan === 'yearly' ? '$rc_annual' : '$rc_monthly',
-        packageType: plan === 'yearly' ? 'ANNUAL' : 'MONTHLY',
-        product: {
-          title: 'Preply Premium',
-          description: 'Unlock all premium features',
-          priceString: plan === 'yearly' ? '$41.99' : '$4.99',
-          currencyCode: 'USD',
-          price: plan === 'yearly' ? 41.99 : 4.99,
-        },
-        _raw: { identifier: plan === 'yearly' ? '$rc_annual' : '$rc_monthly', product: { productIdentifier: productId } },
-      };
+      setPurchasing(true);
+      setError('');
+      try {
+        const products = await Purchases.getProducts({ productIdentifiers: [productId] });
+        const productList = (products as unknown as { products: unknown[] }).products;
+        if (!productList || productList.length === 0) {
+          setError('Product not available. Please try again later.');
+          return;
+        }
+        await Purchases.purchaseStoreProduct({ product: productList[0] as never });
+        const res = await fetch('/api/iap/verify', { method: 'POST' });
+        const json = await res.json() as { isPremium: boolean };
+        if (json.isPremium) {
+          onPremiumActivated();
+        } else {
+          setError('Purchase recorded but activation is pending. Please restart the app.');
+        }
+      } catch (e) {
+        const err = e as Record<string, unknown>;
+        if (!err?.userCancelled) setError(String(err?.message ?? 'Purchase failed. Please try again.'));
+      } finally {
+        setPurchasing(false);
+      }
+      return;
     }
 
     setPurchasing(true);
