@@ -7,7 +7,7 @@ workflows:
         - app_store_credentials
         - preply_secrets
       vars:
-        BUILD_NUMBER: 15
+        BUILD_NUMBER: 16
       xcode: latest
       cocoapods: default
     scripts:

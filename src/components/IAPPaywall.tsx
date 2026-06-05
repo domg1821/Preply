@@ -33,7 +33,7 @@ export default function IAPPaywall({ onPremiumActivated }: Props) {
         const { getOffering } = await import('@/lib/revenuecat');
         setOffering(await getOffering());
       } catch {
-        setError('Could not load pricing. Please try again.');
+        // Silently fall back to hardcoded prices — don't show an error
       } finally {
         setOfferingLoading(false);
       }
@@ -41,11 +41,26 @@ export default function IAPPaywall({ onPremiumActivated }: Props) {
   }, []);
 
   const handlePurchase = useCallback(async () => {
-    if (!offering) return;
-    const pkg: RCPackage | null = plan === 'yearly' ? offering.yearly : offering.monthly;
+    // Use offering package if available, otherwise build a minimal package from known product IDs
+    let pkg: RCPackage | null = offering
+      ? (plan === 'yearly' ? offering.yearly : offering.monthly)
+      : null;
+
     if (!pkg) {
-      setError('This plan is not available right now.');
-      return;
+      const { RC_PRODUCT_MONTHLY, RC_PRODUCT_YEARLY } = await import('@/lib/revenuecat');
+      const productId = plan === 'yearly' ? RC_PRODUCT_YEARLY : RC_PRODUCT_MONTHLY;
+      pkg = {
+        identifier: plan === 'yearly' ? '$rc_annual' : '$rc_monthly',
+        packageType: plan === 'yearly' ? 'ANNUAL' : 'MONTHLY',
+        product: {
+          title: 'Preply Premium',
+          description: 'Unlock all premium features',
+          priceString: plan === 'yearly' ? '$41.99' : '$4.99',
+          currencyCode: 'USD',
+          price: plan === 'yearly' ? 41.99 : 4.99,
+        },
+        _raw: { identifier: plan === 'yearly' ? '$rc_annual' : '$rc_monthly', product: { productIdentifier: productId } },
+      };
     }
 
     setPurchasing(true);
@@ -171,7 +186,7 @@ export default function IAPPaywall({ onPremiumActivated }: Props) {
 
         <button
           onClick={handlePurchase}
-          disabled={purchasing || offeringLoading || !offering}
+          disabled={purchasing || offeringLoading}
           className="w-full py-4 rounded-xl font-bold text-base text-black transition-all hover:opacity-90 active:scale-[0.98] disabled:opacity-60 flex items-center justify-center gap-2 mb-3"
           style={{ background: 'linear-gradient(135deg, #F59E0B, #D97706)', boxShadow: '0 4px 24px rgba(245,158,11,0.35)' }}
         >
