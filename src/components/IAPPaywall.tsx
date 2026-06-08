@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
-import { Crown, Check, RotateCcw, Sparkles, ShoppingCart, Zap, Share2, Printer, FileDown, LayoutGrid } from 'lucide-react';
+import { useEffect, useState, useCallback, useRef } from 'react';
+import { Crown, Check, RotateCcw, Sparkles, ShoppingCart, Zap, Share2, Printer, FileDown, LayoutGrid, RefreshCw } from 'lucide-react';
 import type { RCOffering, RCPackage } from '@/lib/revenuecat';
 
 const FEATURES = [
@@ -26,6 +26,10 @@ async function openExternalUrl(url: string) {
   }
 }
 
+function sleep(ms: number) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 interface Props {
   onPremiumActivated: () => void;
 }
@@ -38,17 +42,29 @@ export default function IAPPaywall({ onPremiumActivated }: Props) {
   const [restoring, setRestoring] = useState(false);
   const [error, setError] = useState('');
   const [restoreMsg, setRestoreMsg] = useState('');
+  const retryCount = useRef(0);
 
-  const loadOffering = useCallback(async () => {
+  // Load offering with up to 3 automatic retries, 2s apart
+  const loadOffering = useCallback(async (attempt = 0) => {
     setOfferingLoading(true);
-    setError('');
+    if (attempt === 0) setError('');
     try {
       const { getOffering } = await import('@/lib/revenuecat');
-      setOffering(await getOffering());
+      const result = await getOffering();
+      setOffering(result);
+      // If packages came back null and we have retries left, retry automatically
+      if (!result.monthly && !result.yearly && attempt < 3) {
+        await sleep(2000);
+        return loadOffering(attempt + 1);
+      }
     } catch {
-      // Fall back to hardcoded prices silently
+      if (attempt < 3) {
+        await sleep(2000);
+        return loadOffering(attempt + 1);
+      }
     } finally {
-      setOfferingLoading(false);
+      if (attempt >= 3) setOfferingLoading(false);
+      else setOfferingLoading(false);
     }
   }, []);
 
@@ -59,51 +75,66 @@ export default function IAPPaywall({ onPremiumActivated }: Props) {
   const handlePurchase = useCallback(async () => {
     setPurchasing(true);
     setError('');
+    retryCount.current = 0;
 
-    const pkg: RCPackage | null = offering
-      ? (plan === 'yearly' ? offering.yearly : offering.monthly)
-      : null;
+    const attemptPurchase = async (): Promise<void> => {
+      const pkg: RCPackage | null = offering
+        ? (plan === 'yearly' ? offering.yearly : offering.monthly)
+        : null;
 
-    try {
-      if (pkg) {
-        // Happy path — purchase via RC package (offering loaded correctly)
-        const { purchasePackage } = await import('@/lib/revenuecat');
-        const result = await purchasePackage(pkg);
-        if (!result.success) {
-          if (!result.cancelled) setError(result.error);
-          return;
+      try {
+        if (pkg) {
+          // Happy path — purchase via RC package
+          const { purchasePackage } = await import('@/lib/revenuecat');
+          const result = await purchasePackage(pkg);
+          if (!result.success) {
+            if (!result.cancelled) setError(result.error);
+            return;
+          }
+        } else {
+          // Fallback — try direct StoreKit product fetch
+          const { RC_PRODUCT_MONTHLY, RC_PRODUCT_YEARLY } = await import('@/lib/revenuecat');
+          const { Purchases } = await import('@revenuecat/purchases-capacitor');
+          const productId = plan === 'yearly' ? RC_PRODUCT_YEARLY : RC_PRODUCT_MONTHLY;
+          const result = await Purchases.getProducts({ productIdentifiers: [productId] });
+          const productList = (result as unknown as { products: unknown[] }).products ?? [];
+
+          if (productList.length === 0) {
+            // Products not loaded yet — retry offering once more before giving up
+            if (retryCount.current < 2) {
+              retryCount.current++;
+              await sleep(2000);
+              const { getOffering } = await import('@/lib/revenuecat');
+              const freshOffering = await getOffering();
+              if (freshOffering.monthly || freshOffering.yearly) {
+                setOffering(freshOffering);
+              }
+              return attemptPurchase();
+            }
+            setError('Unable to load subscription. Tap retry or check your connection.');
+            return;
+          }
+          await Purchases.purchaseStoreProduct({ product: productList[0] as never });
         }
-      } else {
-        // Fallback — offering packages unavailable (products pending Apple approval in sandbox)
-        // RC is configured at this point so getProducts should work in review/production
-        const { RC_PRODUCT_MONTHLY, RC_PRODUCT_YEARLY } = await import('@/lib/revenuecat');
-        const { Purchases } = await import('@revenuecat/purchases-capacitor');
-        const productId = plan === 'yearly' ? RC_PRODUCT_YEARLY : RC_PRODUCT_MONTHLY;
-        const result = await Purchases.getProducts({ productIdentifiers: [productId] });
-        const productList = (result as unknown as { products: unknown[] }).products ?? [];
-        if (productList.length === 0) {
-          setError('Products are pending Apple approval. Please try again after the app is approved.');
-          return;
-        }
-        await Purchases.purchaseStoreProduct({ product: productList[0] as never });
-      }
 
-      // Verify with server and activate premium
-      const res = await fetch('/api/iap/verify', { method: 'POST' });
-      const json = await res.json() as { isPremium: boolean };
-      if (json.isPremium) {
-        onPremiumActivated();
-      } else {
-        setError('Purchase recorded but activation is pending. Please restart the app.');
+        // Verify and activate
+        const res = await fetch('/api/iap/verify', { method: 'POST' });
+        const json = await res.json() as { isPremium: boolean };
+        if (json.isPremium) {
+          onPremiumActivated();
+        } else {
+          setError('Purchase recorded — please restart the app to activate Premium.');
+        }
+      } catch (e) {
+        const err = e as Record<string, unknown>;
+        if (!err?.userCancelled) {
+          setError(String(err?.message ?? 'Purchase failed. Please try again.'));
+        }
       }
-    } catch (e) {
-      const err = e as Record<string, unknown>;
-      if (!err?.userCancelled) {
-        setError(String(err?.message ?? 'Purchase failed. Please try again.'));
-      }
-    } finally {
-      setPurchasing(false);
-    }
+    };
+
+    await attemptPurchase();
+    setPurchasing(false);
   }, [offering, plan, onPremiumActivated]);
 
   const handleRestore = useCallback(async () => {
@@ -200,7 +231,16 @@ export default function IAPPaywall({ onPremiumActivated }: Props) {
         </div>
 
         {error && (
-          <p className="text-xs text-red-400 mb-3 text-center">{error}</p>
+          <div className="mb-3 flex flex-col items-center gap-2">
+            <p className="text-xs text-red-400 text-center">{error}</p>
+            <button
+              onClick={() => { setError(''); loadOffering(); }}
+              className="flex items-center gap-1.5 text-xs text-amber-400 hover:text-amber-300 transition-colors"
+            >
+              <RefreshCw size={11} />
+              Tap to retry
+            </button>
+          </div>
         )}
 
         <button
