@@ -206,6 +206,7 @@ export default function SettingsPage() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deleteError, setDeleteError] = useState('');
+  const [rcReady, setRcReady] = useState(false);
 
   useEffect(() => {
     if (justUpgraded) {
@@ -235,13 +236,15 @@ export default function SettingsPage() {
         if (data?.is_premium) setIsPremium(true);
       });
 
-      // Configure RevenueCat for IAP on iOS
+      // Configure RevenueCat for IAP on iOS — must complete before paywall renders
       if (native) {
         try {
           const { configureRevenueCat } = await import('@/lib/revenuecat');
           await configureRevenueCat(user.id);
         } catch (e) {
           console.warn('[settings] RevenueCat configure failed:', e);
+        } finally {
+          setRcReady(true);
         }
       }
     });
@@ -442,7 +445,13 @@ export default function SettingsPage() {
         </div>
       ) : native ? (
         /* ── iOS free — show IAP paywall (Apple 3.1.1 compliant) ── */
-        <IAPPaywall onPremiumActivated={() => setIsPremium(true)} />
+        rcReady ? (
+          <IAPPaywall onPremiumActivated={() => setIsPremium(true)} />
+        ) : (
+          <div className="flex items-center justify-center py-12">
+            <span className="w-6 h-6 border-2 border-amber-500/30 border-t-amber-500 rounded-full animate-spin" />
+          </div>
+        )
       ) : (
         /* ── Premium Upgrade Section (web only) ── */
         <div className="mb-6 space-y-4">

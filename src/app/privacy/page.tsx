@@ -1,31 +1,54 @@
+import Link from 'next/link';
+import { ChefHat } from 'lucide-react';
+
+export const metadata = { title: 'Privacy Policy' };
+
 export default function PrivacyPage() {
   return (
-    <div style={{ maxWidth: 680, margin: '0 auto', padding: '40px 24px', fontFamily: 'system-ui, sans-serif', color: '#1a1a1a', lineHeight: 1.7 }}>
-      <h1 style={{ fontSize: 28, fontWeight: 700, marginBottom: 8 }}>Privacy Policy</h1>
-      <p style={{ color: '#666', marginBottom: 32 }}>Last updated: May 31, 2026</p>
-
-      <h2 style={{ fontSize: 18, fontWeight: 600, marginTop: 32, marginBottom: 8 }}>Information We Collect</h2>
-      <p>When you create an account, we collect your name and email address. We use this information solely to provide and improve the Preply meal planning service.</p>
-
-      <h2 style={{ fontSize: 18, fontWeight: 600, marginTop: 32, marginBottom: 8 }}>How We Use Your Information</h2>
-      <ul style={{ paddingLeft: 20 }}>
-        <li>To create and manage your account</li>
-        <li>To save your meal plans, recipes, and grocery lists</li>
-        <li>To process subscription payments via Stripe</li>
-        <li>To send important account notifications</li>
-      </ul>
-
-      <h2 style={{ fontSize: 18, fontWeight: 600, marginTop: 32, marginBottom: 8 }}>Data Storage</h2>
-      <p>Your data is stored securely using Supabase. We do not sell or share your personal information with third parties for marketing purposes.</p>
-
-      <h2 style={{ fontSize: 18, fontWeight: 600, marginTop: 32, marginBottom: 8 }}>Payments</h2>
-      <p>Payment processing is handled by Stripe. We do not store your credit card information. Stripe's privacy policy applies to all payment transactions.</p>
-
-      <h2 style={{ fontSize: 18, fontWeight: 600, marginTop: 32, marginBottom: 8 }}>Your Rights</h2>
-      <p>You may request deletion of your account and all associated data at any time by contacting us at domgbp21@gmail.com.</p>
-
-      <h2 style={{ fontSize: 18, fontWeight: 600, marginTop: 32, marginBottom: 8 }}>Contact</h2>
-      <p>If you have any questions about this Privacy Policy, please contact us at <a href="mailto:domgbp21@gmail.com" style={{ color: '#10B981' }}>domgbp21@gmail.com</a>.</p>
+    <div className="min-h-screen flex flex-col" style={{ background: 'var(--bg)' }}>
+      <header className="sticky top-0 z-50 flex items-center gap-3 px-6 py-4 border-b border-[var(--border)]"
+        style={{ background: 'rgba(14,17,23,0.95)', backdropFilter: 'blur(12px)' }}>
+        <Link href="/" className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-xl flex items-center justify-center"
+            style={{ background: 'linear-gradient(135deg, #10B981, #059669)' }}>
+            <ChefHat size={16} className="text-white" />
+          </div>
+          <span className="text-lg font-bold tracking-tight" style={{ color: '#10B981' }}>Preply</span>
+        </Link>
+      </header>
+      <main className="flex-1 max-w-3xl mx-auto px-6 py-12 w-full">
+        <h1 className="text-3xl font-bold text-[var(--text)] mb-2">Privacy Policy</h1>
+        <p className="text-sm text-[var(--text-muted)] mb-8">Last updated: June 2026</p>
+        <div className="space-y-8 text-[var(--text-dim)]">
+          <section>
+            <h2 className="text-xl font-semibold text-[var(--text)] mb-3">1. Information We Collect</h2>
+            <p className="leading-relaxed">We collect your email address and password when you create an account, and the meal plans, recipes, and grocery lists you create in the app. We also collect basic usage data to improve the app.</p>
+          </section>
+          <section>
+            <h2 className="text-xl font-semibold text-[var(--text)] mb-3">2. How We Use Your Information</h2>
+            <p className="leading-relaxed">We use your information to provide the Preply service, process subscription payments, send transactional emails such as password resets, and respond to support requests. We do not sell your personal information.</p>
+          </section>
+          <section>
+            <h2 className="text-xl font-semibold text-[var(--text)] mb-3">3. In-App Purchases</h2>
+            <p className="leading-relaxed">Premium subscriptions purchased through the iOS app are processed by Apple. We do not store your payment card information. Subscription management is handled through your Apple ID Account Settings.</p>
+          </section>
+          <section>
+            <h2 className="text-xl font-semibold text-[var(--text)] mb-3">4. Data Storage</h2>
+            <p className="leading-relaxed">Your data is stored securely using Supabase on AWS infrastructure with industry-standard encryption in transit and at rest.</p>
+          </section>
+          <section>
+            <h2 className="text-xl font-semibold text-[var(--text)] mb-3">5. Data Deletion</h2>
+            <p className="leading-relaxed">You can delete your account and all associated data at any time from Settings in the app. Deletion is permanent and cannot be undone.</p>
+          </section>
+          <section>
+            <h2 className="text-xl font-semibold text-[var(--text)] mb-3">6. Contact</h2>
+            <p className="leading-relaxed">For privacy questions, contact us at <a href="mailto:domgbp21@gmail.com" className="text-[#10B981] hover:underline">domgbp21@gmail.com</a>.</p>
+          </section>
+        </div>
+      </main>
+      <footer className="border-t border-[var(--border)] px-6 py-6 text-center text-sm text-[var(--text-muted)]">
+        © {new Date().getFullYear()} Preply · <Link href="/terms" className="hover:text-white transition-colors">Terms of Use</Link>
+      </footer>
     </div>
   );
 }

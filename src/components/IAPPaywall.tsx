@@ -14,6 +14,18 @@ const FEATURES = [
   { icon: FileDown,   label: 'Event menu PDF export' },
 ];
 
+const PRIVACY_URL = 'https://preply-umber.vercel.app/privacy';
+const TERMS_URL   = 'https://preply-umber.vercel.app/terms';
+
+async function openExternalUrl(url: string) {
+  try {
+    const { Browser } = await import('@capacitor/browser');
+    await Browser.open({ url });
+  } catch {
+    window.open(url, '_blank');
+  }
+}
+
 interface Props {
   onPremiumActivated: () => void;
 }
@@ -45,34 +57,8 @@ export default function IAPPaywall({ onPremiumActivated }: Props) {
       ? (plan === 'yearly' ? offering.yearly : offering.monthly)
       : null;
 
-    // If no offering loaded, purchase directly by product ID
     if (!pkg) {
-      const { RC_PRODUCT_MONTHLY, RC_PRODUCT_YEARLY } = await import('@/lib/revenuecat');
-      const { Purchases } = await import('@revenuecat/purchases-capacitor');
-      const productId = plan === 'yearly' ? RC_PRODUCT_YEARLY : RC_PRODUCT_MONTHLY;
-      setPurchasing(true);
-      setError('');
-      try {
-        const products = await Purchases.getProducts({ productIdentifiers: [productId] });
-        const productList = (products as unknown as { products: unknown[] }).products;
-        if (!productList || productList.length === 0) {
-          setError('Product not available. Please try again later.');
-          return;
-        }
-        await Purchases.purchaseStoreProduct({ product: productList[0] as never });
-        const res = await fetch('/api/iap/verify', { method: 'POST' });
-        const json = await res.json() as { isPremium: boolean };
-        if (json.isPremium) {
-          onPremiumActivated();
-        } else {
-          setError('Purchase recorded but activation is pending. Please restart the app.');
-        }
-      } catch (e) {
-        const err = e as Record<string, unknown>;
-        if (!err?.userCancelled) setError(String(err?.message ?? 'Purchase failed. Please try again.'));
-      } finally {
-        setPurchasing(false);
-      }
+      setError('Subscription options are still loading. Please wait a moment and try again.');
       return;
     }
 
@@ -231,7 +217,20 @@ export default function IAPPaywall({ onPremiumActivated }: Props) {
 
         {/* Apple legal requirement */}
         <p className="text-center text-[10px] text-[var(--text-muted)] leading-relaxed pb-5 px-2">
-          Payment charged to your Apple ID at confirmation. Subscription renews automatically unless cancelled at least 24 hours before the end of the current period. Manage or cancel in your Apple ID Account Settings.
+          Payment charged to your Apple ID at confirmation. Subscription renews automatically unless cancelled at least 24 hours before the end of the current period. Manage or cancel in your Apple ID Account Settings.{' '}
+          <button
+            onClick={() => openExternalUrl(PRIVACY_URL)}
+            className="underline underline-offset-2 hover:text-[var(--text)] transition-colors"
+          >
+            Privacy Policy
+          </button>
+          {' · '}
+          <button
+            onClick={() => openExternalUrl(TERMS_URL)}
+            className="underline underline-offset-2 hover:text-[var(--text)] transition-colors"
+          >
+            Terms of Use
+          </button>
         </p>
       </div>
     </div>
