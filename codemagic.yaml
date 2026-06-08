@@ -58,11 +58,14 @@ workflows:
           keychain add-certificates
           xcode-project use-profiles
 
-      - name: Set build number
+      - name: Set build number and export compliance
         script: |
           echo "Setting build number to $BUILD_NUMBER"
           /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $BUILD_NUMBER" ios/App/App/Info.plist
           /usr/libexec/PlistBuddy -c "Print :CFBundleVersion" ios/App/App/Info.plist
+          # Declare no non-exempt encryption (uses only standard HTTPS)
+          /usr/libexec/PlistBuddy -c "Add :ITSAppUsesNonExemptEncryption bool false" ios/App/App/Info.plist || \
+          /usr/libexec/PlistBuddy -c "Set :ITSAppUsesNonExemptEncryption false" ios/App/App/Info.plist
 
       - name: Build .ipa
         script: |
