@@ -39,39 +39,56 @@ export default function IAPPaywall({ onPremiumActivated }: Props) {
   const [error, setError] = useState('');
   const [restoreMsg, setRestoreMsg] = useState('');
 
-  useEffect(() => {
-    (async () => {
-      try {
-        const { getOffering } = await import('@/lib/revenuecat');
-        setOffering(await getOffering());
-      } catch {
-        // Silently fall back to hardcoded prices — don't show an error
-      } finally {
-        setOfferingLoading(false);
-      }
-    })();
+  const loadOffering = useCallback(async () => {
+    setOfferingLoading(true);
+    setError('');
+    try {
+      const { getOffering } = await import('@/lib/revenuecat');
+      setOffering(await getOffering());
+    } catch {
+      // Fall back to hardcoded prices silently
+    } finally {
+      setOfferingLoading(false);
+    }
   }, []);
 
+  useEffect(() => {
+    loadOffering();
+  }, [loadOffering]);
+
   const handlePurchase = useCallback(async () => {
+    setPurchasing(true);
+    setError('');
+
     const pkg: RCPackage | null = offering
       ? (plan === 'yearly' ? offering.yearly : offering.monthly)
       : null;
 
-    if (!pkg) {
-      setError('Subscription options are still loading. Please wait a moment and try again.');
-      return;
-    }
-
-    setPurchasing(true);
-    setError('');
     try {
-      const { purchasePackage } = await import('@/lib/revenuecat');
-      const result = await purchasePackage(pkg);
-      if (!result.success) {
-        if (!result.cancelled) setError(result.error);
-        return;
+      if (pkg) {
+        // Happy path — purchase via RC package (offering loaded correctly)
+        const { purchasePackage } = await import('@/lib/revenuecat');
+        const result = await purchasePackage(pkg);
+        if (!result.success) {
+          if (!result.cancelled) setError(result.error);
+          return;
+        }
+      } else {
+        // Fallback — offering packages unavailable (products pending Apple approval in sandbox)
+        // RC is configured at this point so getProducts should work in review/production
+        const { RC_PRODUCT_MONTHLY, RC_PRODUCT_YEARLY } = await import('@/lib/revenuecat');
+        const { Purchases } = await import('@revenuecat/purchases-capacitor');
+        const productId = plan === 'yearly' ? RC_PRODUCT_YEARLY : RC_PRODUCT_MONTHLY;
+        const result = await Purchases.getProducts({ productIdentifiers: [productId] });
+        const productList = (result as unknown as { products: unknown[] }).products ?? [];
+        if (productList.length === 0) {
+          setError('Products are pending Apple approval. Please try again after the app is approved.');
+          return;
+        }
+        await Purchases.purchaseStoreProduct({ product: productList[0] as never });
       }
 
+      // Verify with server and activate premium
       const res = await fetch('/api/iap/verify', { method: 'POST' });
       const json = await res.json() as { isPremium: boolean };
       if (json.isPremium) {
@@ -80,7 +97,10 @@ export default function IAPPaywall({ onPremiumActivated }: Props) {
         setError('Purchase recorded but activation is pending. Please restart the app.');
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Purchase failed. Please try again.');
+      const err = e as Record<string, unknown>;
+      if (!err?.userCancelled) {
+        setError(String(err?.message ?? 'Purchase failed. Please try again.'));
+      }
     } finally {
       setPurchasing(false);
     }
