@@ -291,19 +291,23 @@ export default function IAPPaywall({ onPremiumActivated }: Props) {
         {/* Apple legal requirement */}
         <p className="text-center text-[10px] text-[var(--text-muted)] leading-relaxed pb-5 px-2">
           Payment charged to your Apple ID at confirmation. Subscription renews automatically unless cancelled at least 24 hours before the end of the current period. Manage or cancel in your Apple ID Account Settings.{' '}
-          <button
-            onClick={() => openExternalUrl(PRIVACY_URL)}
+          <a
+            href={PRIVACY_URL}
+            target="_blank"
+            rel="noopener noreferrer"
             className="underline underline-offset-2 hover:text-[var(--text)] transition-colors"
           >
             Privacy Policy
-          </button>
+          </a>
           {' · '}
-          <button
-            onClick={() => openExternalUrl(TERMS_URL)}
+          <a
+            href={TERMS_URL}
+            target="_blank"
+            rel="noopener noreferrer"
             className="underline underline-offset-2 hover:text-[var(--text)] transition-colors"
           >
             Terms of Use
-          </button>
+          </a>
         </p>
       </div>
     </div>
