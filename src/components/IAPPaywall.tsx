@@ -111,7 +111,7 @@ export default function IAPPaywall({ onPremiumActivated }: Props) {
               }
               return attemptPurchase();
             }
-            setError('Unable to load subscription. Tap retry or check your connection.');
+            setError('Subscription not available right now. Tap retry to try again.');
             return;
           }
           await Purchases.purchaseStoreProduct({ product: productList[0] as never });
@@ -127,8 +127,21 @@ export default function IAPPaywall({ onPremiumActivated }: Props) {
         }
       } catch (e) {
         const err = e as Record<string, unknown>;
-        if (!err?.userCancelled) {
-          setError(String(err?.message ?? 'Purchase failed. Please try again.'));
+        const isCancelled = err?.userCancelled === true;
+        if (!isCancelled) {
+          const msg = String(err?.message ?? '');
+          // Never surface RC SDK internals to the user (e.g. "configuration" errors,
+          // rev.cat links). Show a clean retry prompt instead.
+          const isRCInternalError =
+            msg.includes('rev.cat') ||
+            msg.toLowerCase().includes('configuration') ||
+            msg.toLowerCase().includes('underlying error') ||
+            msg.toLowerCase().includes('purchases error');
+          setError(
+            isRCInternalError
+              ? 'Subscription not available right now. Tap retry to try again.'
+              : (msg || 'Purchase failed. Please try again.')
+          );
         }
       }
     };
