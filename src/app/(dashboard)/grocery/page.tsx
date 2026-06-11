@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import {
   ChevronLeft, ChevronRight, Check, ShoppingCart, RefreshCw, Printer,
-  Sparkles, Trash2, X, Plus, Minus, Users, Crown, List, LayoutList,
+  Sparkles, Trash2, X, Plus, Minus, Users, List, LayoutList,
   ClipboardCopy, ExternalLink, Share2, Home, DollarSign, PackageCheck,
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
@@ -157,7 +157,6 @@ function GroceryContent() {
   const [newUnit, setNewUnit] = useState('');
   const [showExport, setShowExport] = useState(false);
   const [clearing, setClearing] = useState(false);
-  const [isPremium, setIsPremium] = useState(false);
   const [pantry, setPantryState] = useState<Record<string, boolean>>({});
   const [costs, setCostsState] = useState<Record<string, number>>({});
   const [aiLoading, setAiLoading] = useState(false);
@@ -168,13 +167,12 @@ function GroceryContent() {
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const printRef = useRef<HTMLDivElement>(null);
 
-  // ── Load premium ──────────────────────────────────────────────────────────
+  // ── Load share URL ────────────────────────────────────────────────────────
   useEffect(() => {
     const supabase = createClient();
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (!user) return;
-      supabase.from('profiles').select('id, is_premium').eq('id', user.id).single().then(({ data }) => {
-        if (data?.is_premium) setIsPremium(true);
+      supabase.from('profiles').select('id').eq('id', user.id).single().then(({ data }) => {
         if (data?.id) {
           const base = getAppUrl() || window.location.origin;
           setShareUrl(`${base}/grocery/shared/${data.id}/${weekStart}`);
@@ -423,20 +421,10 @@ function GroceryContent() {
               <ExternalLink size={13} />
               <span className="hidden sm:inline">Order Online</span>
             </Button>
-            {isPremium ? (
-              <Button variant="ghost" size="sm" onClick={copyShareLink} title="Share list">
-                <Share2 size={13} />
-                <span className="hidden sm:inline">{copied ? 'Copied!' : 'Share'}</span>
-              </Button>
-            ) : (
-              <button
-                onClick={() => router.push('/settings')}
-                className="flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg text-amber-400 border border-amber-500/20 hover:bg-amber-500/10 transition-colors"
-              >
-                <Crown size={11} />
-                <span className="hidden sm:inline">Share</span>
-              </button>
-            )}
+            <Button variant="ghost" size="sm" onClick={copyShareLink} title="Share list">
+              <Share2 size={13} />
+              <span className="hidden sm:inline">{copied ? 'Copied!' : 'Share'}</span>
+            </Button>
           </div>
         </div>
 
@@ -526,7 +514,6 @@ function GroceryContent() {
               manualItems={manualItems}
               checkedKeys={checkedKeys}
               people={people}
-              isPremium={isPremium}
               aiLoading={aiLoading}
               aiResult={aiResult}
               aiError={aiError}
@@ -619,7 +606,7 @@ function GroceryContent() {
 // ─── By Ingredient view ────────────────────────────────────────────────────
 
 function IngredientView({
-  combined, manualItems, checkedKeys, people, isPremium,
+  combined, manualItems, checkedKeys, people,
   aiLoading, aiResult, aiError,
   pantry, costs,
   onToggleCombined, onToggleManual, onRemoveManual, onAiOrganize, onTogglePantry, onSetCost,
@@ -628,7 +615,6 @@ function IngredientView({
   manualItems: ManualItem[];
   checkedKeys: Set<string>;
   people: number;
-  isPremium: boolean;
   aiLoading: boolean;
   aiResult: string;
   aiError: string;
@@ -652,22 +638,15 @@ function IngredientView({
 
   return (
     <div className="flex flex-col gap-3">
-      {/* AI Organize — premium */}
-      <div className="rounded-2xl border overflow-hidden"
-        style={{ background: 'var(--surface)', borderColor: isPremium ? 'var(--border)' : 'rgba(245,158,11,0.2)' }}>
+      {/* AI Organize */}
+      <div className="rounded-2xl border border-[var(--border)] overflow-hidden"
+        style={{ background: 'var(--surface)' }}>
         <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--border)]">
           <div className="flex items-center gap-2">
-            <Sparkles size={14} className={isPremium ? 'text-[var(--primary)]' : 'text-amber-400'} />
-            <span className="text-sm font-semibold text-[var(--text)]">
-              AI Organize by Store Section
-            </span>
-            {!isPremium && (
-              <span className="flex items-center gap-1 text-[10px] font-bold text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded-full border border-amber-500/20">
-                <Crown size={8} /> PREMIUM
-              </span>
-            )}
+            <Sparkles size={14} className="text-[var(--primary)]" />
+            <span className="text-sm font-semibold text-[var(--text)]">AI Organize by Store Section</span>
           </div>
-          {isPremium && !aiResult && (
+          {!aiResult && (
             <button
               onClick={onAiOrganize}
               disabled={aiLoading}
@@ -678,48 +657,37 @@ function IngredientView({
               {aiLoading ? 'Organizing…' : 'Organize'}
             </button>
           )}
-          {!isPremium && (
-            <a href="/settings" className="text-xs font-bold text-amber-400 hover:underline">Unlock →</a>
+        </div>
+        <div className="px-4 py-3">
+          {aiError && <p className="text-xs text-red-400 mb-2">{aiError}</p>}
+          {aiLoading && (
+            <div className="flex items-center gap-2 text-sm text-[var(--text-muted)]">
+              <span className="w-3 h-3 border-2 border-[var(--primary)] border-t-transparent rounded-full animate-spin" />
+              Organizing your list by store section…
+            </div>
+          )}
+          {aiResult ? (
+            <div>
+              <pre className="text-xs text-[var(--text)] whitespace-pre-wrap font-sans leading-relaxed mb-3">{aiResult}</pre>
+              <div className="flex gap-2">
+                <button onClick={copyAiResult}
+                  className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg transition-colors"
+                  style={{ background: 'var(--primary)', color: '#fff' }}>
+                  <ClipboardCopy size={11} />
+                  {copied ? 'Copied!' : 'Copy'}
+                </button>
+                <button onClick={onAiOrganize}
+                  className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--text)] transition-colors">
+                  Redo
+                </button>
+              </div>
+            </div>
+          ) : !aiLoading && (
+            <p className="text-xs text-[var(--text-muted)]">
+              Groups your ingredients by store section (Produce, Meat, Dairy…) and combines duplicates.
+            </p>
           )}
         </div>
-
-        {isPremium && (
-          <div className="px-4 py-3">
-            {aiError && <p className="text-xs text-red-400 mb-2">{aiError}</p>}
-            {aiLoading && (
-              <div className="flex items-center gap-2 text-sm text-[var(--text-muted)]">
-                <span className="w-3 h-3 border-2 border-[var(--primary)] border-t-transparent rounded-full animate-spin" />
-                Organizing your list by store section…
-              </div>
-            )}
-            {aiResult ? (
-              <div>
-                <pre className="text-xs text-[var(--text)] whitespace-pre-wrap font-sans leading-relaxed mb-3">{aiResult}</pre>
-                <div className="flex gap-2">
-                  <button onClick={copyAiResult}
-                    className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg transition-colors"
-                    style={{ background: 'var(--primary)', color: '#fff' }}>
-                    <ClipboardCopy size={11} />
-                    {copied ? 'Copied!' : 'Copy'}
-                  </button>
-                  <button onClick={onAiOrganize}
-                    className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--text)] transition-colors">
-                    Redo
-                  </button>
-                </div>
-              </div>
-            ) : !aiLoading && (
-              <p className="text-xs text-[var(--text-muted)]">
-                Groups your ingredients by store section (Produce, Meat, Dairy…) and combines duplicates.
-              </p>
-            )}
-          </div>
-        )}
-        {!isPremium && (
-          <div className="px-4 py-3">
-            <p className="text-xs text-[var(--text-muted)]">Upgrade to Premium to auto-organize by Produce, Meat & Seafood, Dairy, Pantry, and more.</p>
-          </div>
-        )}
       </div>
 
       {/* Combined ingredient list */}

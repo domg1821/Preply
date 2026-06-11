@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { ChevronLeft, ChevronRight, ChevronUp, ChevronDown, ShoppingCart, BookOpen, Database, Sparkles, Check, Crown, Shield, LayoutGrid, CalendarDays, Plus, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ChevronUp, ChevronDown, ShoppingCart, BookOpen, Database, Sparkles, Check, CalendarDays, Plus, X } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { MealSlot } from '@/components/calendar/MealSlot';
@@ -10,7 +10,6 @@ import { MealPlanEntry, MealType, Recipe, FoodItem } from '@/types';
 import { formatDate, getMondayOfWeek, getWeekDates, roundMacro, calcRecipeMacros } from '@/lib/utils';
 import { format, isToday } from 'date-fns';
 import { createClient } from '@/lib/supabase/client';
-import { useIsNative } from '@/lib/useIsNative';
 import Link from 'next/link';
 
 const MEAL_TYPES: MealType[] = ['breakfast', 'lunch', 'dinner', 'snack'];
@@ -38,7 +37,6 @@ const SUGGEST_MEAL_ORDER: Record<string, number> = { breakfast: 0, lunch: 1, din
 
 export default function CalendarPage() {
   const router = useRouter();
-  const native = useIsNative();
   const [weekStart, setWeekStart] = useState(() => getMondayOfWeek(new Date()));
   const [entries, setEntries] = useState<MealPlanEntry[]>([]);
   const [recipes, setRecipes] = useState<Recipe[]>([]);
@@ -49,28 +47,7 @@ export default function CalendarPage() {
   const [grocerySuccess, setGrocerySuccess] = useState(false);
   const [groceryToast, setGroceryToast] = useState<string | null>(null);
   const [showSuggest, setShowSuggest] = useState(false);
-  const [isPremium, setIsPremium] = useState(false);
-  const [showPremiumGate, setShowPremiumGate] = useState(false);
   const [calView, setCalView] = useState<'week' | 'month'>('week');
-
-  useEffect(() => {
-    async function checkPremium() {
-      const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-      const { data } = await supabase.from('profiles').select('is_premium').eq('id', user.id).single();
-      if (data?.is_premium) {
-        setIsPremium(true);
-      } else {
-        // Re-check once after 3s in case the confirm endpoint is still running
-        setTimeout(async () => {
-          const { data: retryData } = await supabase.from('profiles').select('is_premium').eq('id', user.id).single();
-          if (retryData?.is_premium) setIsPremium(true);
-        }, 3000);
-      }
-    }
-    checkPremium();
-  }, []);
 
   const weekDates = getWeekDates(weekStart);
 
@@ -236,10 +213,9 @@ export default function CalendarPage() {
           >
             Today
           </button>
-          <Button variant="secondary" size="sm" onClick={() => isPremium ? setShowSuggest(true) : setShowPremiumGate(true)}>
+          <Button variant="secondary" size="sm" onClick={() => setShowSuggest(true)}>
             <Sparkles size={13} />
             <span className="hidden sm:inline">AI Suggest</span>
-            {!isPremium && <Crown size={10} className="text-amber-400" />}
           </Button>
         </div>
       </div>
@@ -498,86 +474,6 @@ export default function CalendarPage() {
         onApply={handleApplySuggestions}
       />
 
-      {/* Premium Gate Modal */}
-      {showPremiumGate && !native && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowPremiumGate(false)} />
-          <div className="relative w-full max-w-sm rounded-2xl overflow-hidden shadow-2xl"
-            style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
-            {/* Gradient header */}
-            <div className="relative px-6 pt-6 pb-5 text-center"
-              style={{ background: 'linear-gradient(135deg, rgba(245,158,11,0.12), rgba(245,158,11,0.04))' }}>
-              <div className="absolute top-3 right-3">
-                <button
-                  onClick={() => setShowPremiumGate(false)}
-                  className="w-7 h-7 rounded-full flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--text)] transition-colors"
-                  style={{ background: 'var(--surface-2)' }}
-                >
-                  <span className="text-sm leading-none">✕</span>
-                </button>
-              </div>
-              <div className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-3"
-                style={{ background: 'linear-gradient(135deg, #F59E0B, #D97706)' }}>
-                <Crown size={26} className="text-white" />
-              </div>
-              <h2 className="text-lg font-bold text-[var(--text)] mb-1">AI Meal Planning</h2>
-              <p className="text-sm text-[var(--text-muted)]">
-                Let AI build your entire week in seconds — personalized to your goals.
-              </p>
-            </div>
-
-            {/* Features */}
-            <div className="px-6 py-4 space-y-2.5">
-              {[
-                { icon: '⚡', text: 'Full week planned in under 60 seconds' },
-                { icon: '🎯', text: 'Matches your calories & macro goals' },
-                { icon: '🛒', text: 'Auto-generates your grocery list' },
-                { icon: '🔄', text: 'Regenerate any meal you don\'t like' },
-              ].map(({ icon, text }) => (
-                <div key={text} className="flex items-center gap-3">
-                  <span className="text-base shrink-0">{icon}</span>
-                  <p className="text-sm text-[var(--text)]">{text}</p>
-                </div>
-              ))}
-            </div>
-
-            {/* Social proof */}
-            <div className="mx-6 mb-4 rounded-xl px-4 py-2.5 flex items-center justify-between"
-              style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
-              <div className="text-center">
-                <p className="text-sm font-bold text-[var(--text)]">2,400+</p>
-                <p className="text-[10px] text-[var(--text-muted)]">Members</p>
-              </div>
-              <div className="w-px h-8 bg-[var(--border)]" />
-              <div className="text-center">
-                <p className="text-sm font-bold text-[var(--text)]">4.9 ★</p>
-                <p className="text-[10px] text-[var(--text-muted)]">Rating</p>
-              </div>
-              <div className="w-px h-8 bg-[var(--border)]" />
-              <div className="text-center">
-                <p className="text-sm font-bold text-amber-400">$3.50</p>
-                <p className="text-[10px] text-[var(--text-muted)]">Per month</p>
-              </div>
-            </div>
-
-            {/* CTA */}
-            <div className="px-6 pb-6 flex flex-col gap-2">
-              <Link
-                href="/settings"
-                className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-all hover:opacity-90 active:scale-95"
-                style={{ background: 'linear-gradient(135deg, #F59E0B, #D97706)', color: '#000' }}
-                onClick={() => setShowPremiumGate(false)}
-              >
-                <Crown size={15} />
-                Unlock AI Suggest — From $3.50/mo
-              </Link>
-              <p className="text-center text-[10px] text-[var(--text-muted)]">
-                🛡️ 7-day money-back guarantee · Cancel anytime
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

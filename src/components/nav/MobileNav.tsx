@@ -3,7 +3,7 @@ import { useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
-import { LayoutDashboard, CalendarDays, BookOpen, ShoppingCart, Settings, Crown } from 'lucide-react';
+import { LayoutDashboard, CalendarDays, BookOpen, ShoppingCart, Settings } from 'lucide-react';
 
 const navItems = [
   { href: '/home', icon: LayoutDashboard, label: 'Today' },
@@ -13,11 +13,10 @@ const navItems = [
   { href: '/settings', icon: Settings, label: 'Settings' },
 ];
 
-export function MobileNav({ isPremium }: { isPremium?: boolean | null }) {
+export function MobileNav() {
   const pathname = usePathname();
   const router = useRouter();
 
-  // Prefetch all nav routes immediately on mount so taps are instant
   useEffect(() => {
     navItems.forEach(({ href }) => router.prefetch(href));
   }, [router]);
@@ -29,7 +28,6 @@ export function MobileNav({ isPremium }: { isPremium?: boolean | null }) {
     >
       {navItems.map(({ href, icon: Icon, label }) => {
         const active = pathname === href || (href !== '/home' && pathname.startsWith(href));
-        const isSettingsLink = href === '/settings';
         return (
           <Link
             key={href}
@@ -41,17 +39,7 @@ export function MobileNav({ isPremium }: { isPremium?: boolean | null }) {
             )}
             style={{ WebkitTapHighlightColor: 'transparent' }}
           >
-            <span className="relative">
-              <Icon size={20} strokeWidth={active ? 2.5 : 1.8} />
-              {isSettingsLink && isPremium && (
-                <span
-                  className="absolute -top-1 -right-1.5 w-3.5 h-3.5 rounded-full flex items-center justify-center"
-                  style={{ background: 'linear-gradient(135deg, #F59E0B, #D97706)' }}
-                >
-                  <Crown size={7} className="text-black" />
-                </span>
-              )}
-            </span>
+            <Icon size={20} strokeWidth={active ? 2.5 : 1.8} />
             <span>{label}</span>
           </Link>
         );
