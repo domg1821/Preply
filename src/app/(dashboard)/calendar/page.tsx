@@ -181,10 +181,10 @@ export default function CalendarPage() {
   }, [weekStart, selectedDay]);
 
   const MEAL_COLORS_MOBILE: Record<string, { bg: string; text: string; dot: string }> = {
-    breakfast: { bg: 'bg-amber-500/10', text: 'text-amber-400', dot: 'bg-amber-400' },
-    lunch: { bg: 'bg-emerald-500/10', text: 'text-emerald-400', dot: 'bg-emerald-400' },
-    dinner: { bg: 'bg-purple-500/10', text: 'text-purple-400', dot: 'bg-purple-400' },
-    snack: { bg: 'bg-blue-500/10', text: 'text-blue-400', dot: 'bg-blue-400' },
+    breakfast: { bg: 'bg-amber-500/10',   text: 'text-amber-400',   dot: 'bg-amber-400'   },
+    lunch:     { bg: 'bg-emerald-500/10', text: 'text-emerald-400', dot: 'bg-emerald-400' },
+    dinner:    { bg: 'bg-violet-500/10',  text: 'text-violet-400',  dot: 'bg-violet-400'  },
+    snack:     { bg: 'bg-cyan-500/10',    text: 'text-cyan-400',    dot: 'bg-cyan-400'    },
   };
 
   return (
@@ -208,15 +208,19 @@ export default function CalendarPage() {
         <div className="flex items-center gap-1.5">
           <button
             onClick={() => { setWeekStart(getMondayOfWeek(new Date())); setSelectedDay(todayStr); }}
-            className="text-xs px-2.5 py-1.5 rounded-lg border border-[var(--border)] text-[var(--text-muted)] active:bg-[var(--surface-2)]"
-            style={{ background: 'var(--surface)' }}
+            className="text-xs px-2.5 py-1.5 rounded-xl border text-[var(--text-muted)] active:bg-[var(--surface-2)]"
+            style={{ background: 'var(--surface)', borderColor: 'var(--border-2)' }}
           >
             Today
           </button>
-          <Button variant="secondary" size="sm" onClick={() => setShowSuggest(true)}>
+          <button
+            onClick={() => setShowSuggest(true)}
+            className="flex items-center gap-1.5 text-xs font-bold text-white px-3 py-1.5 rounded-xl transition-all hover:opacity-90 active:scale-95"
+            style={{ background: 'linear-gradient(135deg, #8B5CF6, #EC4899)', boxShadow: '0 4px 12px rgba(139,92,246,0.3)' }}
+          >
             <Sparkles size={13} />
             <span className="hidden sm:inline">AI Suggest</span>
-          </Button>
+          </button>
         </div>
       </div>
 
@@ -250,8 +254,9 @@ export default function CalendarPage() {
                         onClick={() => setSelectedDay(dateStr)}
                         className="flex flex-col items-center gap-1 shrink-0 w-12 py-2 rounded-2xl"
                         style={{
-                          background: isSelected ? 'var(--primary)' : isTodayDate ? 'rgba(16,185,129,0.08)' : 'var(--surface)',
-                          border: `1px solid ${isSelected ? 'var(--primary)' : isTodayDate ? 'rgba(16,185,129,0.3)' : 'var(--border)'}`,
+                          background: isSelected ? 'linear-gradient(135deg, #10B981, #06B6D4)' : isTodayDate ? 'rgba(16,185,129,0.08)' : 'var(--surface)',
+                          border: `1px solid ${isSelected ? 'transparent' : isTodayDate ? 'rgba(16,185,129,0.3)' : 'var(--border)'}`,
+                          boxShadow: isSelected ? '0 4px 12px rgba(16,185,129,0.3)' : 'none',
                         }}
                       >
                         <span className={`text-[10px] font-bold uppercase ${isSelected ? 'text-white' : isTodayDate ? 'text-[var(--primary)]' : 'text-[var(--text-muted)]'}`}>
@@ -370,9 +375,10 @@ export default function CalendarPage() {
                     <div className="grid grid-cols-8 gap-2 mb-2">
                       <div />
                       {weekDates.map((date, i) => (
-                        <div key={i} className={`text-center py-2 rounded-xl ${isToday(date) ? 'bg-[var(--primary)]/10' : ''}`}>
-                          <p className="text-xs text-[var(--text-muted)]">{DAY_LABELS[i]}</p>
-                          <p className={`text-base font-bold ${isToday(date) ? 'text-[var(--primary)]' : 'text-[var(--text)]'}`}>
+                        <div key={i} className="text-center py-2 rounded-xl"
+                          style={isToday(date) ? { background: 'linear-gradient(135deg, rgba(16,185,129,0.15), rgba(6,182,212,0.08))', boxShadow: '0 2px 8px rgba(16,185,129,0.1)' } : {}}>
+                          <p className="text-xs" style={{ color: isToday(date) ? 'var(--primary)' : 'var(--text-muted)' }}>{DAY_LABELS[i]}</p>
+                          <p className="text-base font-bold" style={{ color: isToday(date) ? 'var(--primary)' : 'var(--text)' }}>
                             {format(date, 'd')}
                           </p>
                         </div>

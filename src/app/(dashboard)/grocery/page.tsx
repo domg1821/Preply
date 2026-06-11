@@ -428,6 +428,41 @@ function GroceryContent() {
           </div>
         </div>
 
+        {/* ── Progress bar ── */}
+        {!isEmpty && (
+          <div className="px-4 md:px-6 mb-3 no-print">
+            <div
+              className="rounded-2xl p-4"
+              style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}
+            >
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <PackageCheck size={14} style={{ color: '#10B981' }} />
+                  <span className="text-sm font-bold text-[var(--text)]">Shopping Progress</span>
+                </div>
+                <span className="text-sm font-bold" style={{ color: totalChecked > 0 ? '#10B981' : 'var(--text-muted)' }}>
+                  {totalChecked} / {totalChecked + totalToBuy}
+                </span>
+              </div>
+              <div className="h-2 rounded-full overflow-hidden" style={{ background: 'var(--surface-3)' }}>
+                <div
+                  className="h-full rounded-full transition-all duration-500"
+                  style={{
+                    width: `${totalChecked + totalToBuy > 0 ? (totalChecked / (totalChecked + totalToBuy)) * 100 : 0}%`,
+                    background: 'linear-gradient(90deg, #10B981, #06B6D4)',
+                    boxShadow: '0 0 8px rgba(16,185,129,0.4)',
+                  }}
+                />
+              </div>
+              {totalChecked > 0 && totalToBuy === 0 && (
+                <p className="text-xs font-semibold mt-2 text-center" style={{ color: '#10B981' }}>
+                  🎉 All done! Shopping complete.
+                </p>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* ── People count ── */}
         <div className="px-4 md:px-6 mb-3 no-print">
           <div className="flex items-center gap-3 p-3 rounded-xl border border-[var(--border)]" style={{ background: 'var(--surface)' }}>
@@ -650,8 +685,8 @@ function IngredientView({
             <button
               onClick={onAiOrganize}
               disabled={aiLoading}
-              className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg transition-colors"
-              style={{ background: 'var(--primary)', color: '#fff' }}
+              className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-xl transition-all hover:opacity-90 active:scale-95 disabled:opacity-60"
+              style={{ background: 'linear-gradient(135deg, #8B5CF6, #EC4899)', color: '#fff', boxShadow: '0 3px 10px rgba(139,92,246,0.3)' }}
             >
               <Sparkles size={11} />
               {aiLoading ? 'Organizing…' : 'Organize'}

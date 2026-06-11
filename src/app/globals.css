@@ -1,24 +1,47 @@
 @import "tailwindcss";
 
 :root {
-  --bg: #0E1117;
-  --surface: #161C26;
-  --surface-2: #1C2333;
-  --border: #222D3E;
-  --border-2: #2A3850;
+  /* ── Base surfaces ──────────────────────────────── */
+  --bg: #07090E;
+  --surface: #0D1219;
+  --surface-2: #131B26;
+  --surface-3: #1A2333;
+  --border: rgba(255, 255, 255, 0.06);
+  --border-2: rgba(255, 255, 255, 0.11);
+
+  /* ── Brand ──────────────────────────────────────── */
   --primary: #10B981;
   --primary-dark: #059669;
   --primary-light: #34D399;
-  --primary-glow: rgba(16, 185, 129, 0.15);
-  --accent: #F59E0B;
-  --accent-dark: #D97706;
-  --text: #E8EDF5;
-  --text-muted: #5A6A82;
-  --text-dim: #8FA0B8;
+  --primary-glow: rgba(16, 185, 129, 0.22);
+
+  --cyan: #06B6D4;
+  --cyan-glow: rgba(6, 182, 212, 0.2);
+
+  --violet: #8B5CF6;
+  --violet-glow: rgba(139, 92, 246, 0.2);
+
+  --pink: #EC4899;
+  --pink-glow: rgba(236, 72, 153, 0.2);
+
+  --amber: #F59E0B;
+  --amber-glow: rgba(245, 158, 11, 0.2);
+
+  --purple: #A855F7;
+
+  /* ── Text ───────────────────────────────────────── */
+  --text: #F1F5F9;
+  --text-muted: #475569;
+  --text-dim: #94A3B8;
+
+  /* ── Status ─────────────────────────────────────── */
   --danger: #EF4444;
   --success: #22C55E;
   --blue: #60A5FA;
-  --purple: #A78BFA;
+
+  /* ── Legacy aliases ─────────────────────────────── */
+  --accent: var(--amber);
+  --accent-dark: #D97706;
 }
 
 @theme inline {
@@ -38,9 +61,9 @@
   --font-mono: var(--font-geist-mono);
 }
 
+/* ── Reset ──────────────────────────────────────────── */
 * {
   box-sizing: border-box;
-  /* Kill the grey flash on tap — must be on every element */
   -webkit-tap-highlight-color: transparent;
 }
 
@@ -64,65 +87,99 @@ body {
   -webkit-font-smoothing: antialiased;
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
-  /* Safe area padding */
   padding-top: env(safe-area-inset-top);
   padding-left: env(safe-area-inset-left);
   padding-right: env(safe-area-inset-right);
 }
 
-/* Instant tap response — no delay, no highlight */
+/* Subtle background mesh */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 700px 500px at -5% -5%,  rgba(16,185,129,0.05)  0%, transparent 70%),
+    radial-gradient(ellipse 600px 500px at 105%  5%,  rgba(6,182,212,0.04)   0%, transparent 70%),
+    radial-gradient(ellipse 500px 600px at  50% 110%, rgba(139,92,246,0.04)  0%, transparent 70%);
+}
+
+/* ── Touch ──────────────────────────────────────────── */
 a, button, input, select, textarea, [role="button"] {
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
   cursor: pointer;
 }
 
-/* Kill transition on buttons so they feel instant on mobile */
 @media (hover: none) {
-  button, a {
-    transition: none !important;
-  }
+  button, a { transition: none !important; }
 }
 
-/* Scrollbar */
-::-webkit-scrollbar { width: 5px; height: 5px; }
+/* ── Scrollbar ──────────────────────────────────────── */
+::-webkit-scrollbar { width: 4px; height: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--border-2); border-radius: 99px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--primary-dark); }
 
-/* Smooth transitions on interactive elements only */
+/* ── Transitions ────────────────────────────────────── */
 button, a, input, select, textarea {
   transition-property: background-color, border-color, color, opacity, box-shadow, transform;
   transition-duration: 150ms;
   transition-timing-function: ease;
 }
 
-/* Selection */
+/* ── Selection ──────────────────────────────────────── */
 ::selection {
   background-color: rgba(16, 185, 129, 0.25);
   color: var(--text);
 }
 
-/* Card highlight — subtle top shimmer */
-.card-highlight {
-  background: linear-gradient(135deg, rgba(255,255,255,0.03) 0%, transparent 60%);
-  border-top: 1px solid rgba(255,255,255,0.06);
+/* ── Focus ──────────────────────────────────────────── */
+:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
 }
 
-/* Glow shadow for primary elements */
-.glow-primary {
-  box-shadow: 0 0 20px rgba(16, 185, 129, 0.2), 0 4px 12px rgba(0,0,0,0.4);
+/* ── Animations ─────────────────────────────────────── */
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position:  200% 0; }
 }
 
-/* Gradient text */
+@keyframes glow-pulse {
+  0%, 100% { box-shadow: 0 0 16px rgba(16,185,129,0.2); }
+  50%       { box-shadow: 0 0 28px rgba(16,185,129,0.45); }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Utility classes ────────────────────────────────── */
+.shimmer {
+  background: linear-gradient(90deg,
+    var(--surface) 0%,
+    var(--surface-2) 45%,
+    var(--surface-3) 50%,
+    var(--surface-2) 55%,
+    var(--surface) 100%);
+  background-size: 200% 100%;
+  animation: shimmer 1.6s infinite;
+}
+
 .gradient-text {
-  background: linear-gradient(135deg, var(--primary-light), var(--primary));
+  background: linear-gradient(135deg, #10B981, #06B6D4);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
 
-/* Gradient border card */
+.glow-primary {
+  box-shadow: 0 0 24px rgba(16, 185, 129, 0.25), 0 4px 12px rgba(0,0,0,0.5);
+}
+
 .gradient-border {
   position: relative;
 }
@@ -132,7 +189,7 @@ button, a, input, select, textarea {
   inset: 0;
   border-radius: inherit;
   padding: 1px;
-  background: linear-gradient(135deg, rgba(16,185,129,0.3), rgba(16,185,129,0.05));
+  background: linear-gradient(135deg, rgba(16,185,129,0.4), rgba(6,182,212,0.1));
   -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
   mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
   -webkit-mask-composite: xor;
@@ -140,13 +197,10 @@ button, a, input, select, textarea {
   pointer-events: none;
 }
 
-/* Focus ring for accessibility */
-:focus-visible {
-  outline: 2px solid var(--primary);
-  outline-offset: 2px;
+.animate-fade-in {
+  animation: fade-in 0.25s ease both;
 }
 
-/* Hide scrollbar utility */
 .scrollbar-none {
   scrollbar-width: none;
 }
@@ -154,7 +208,11 @@ button, a, input, select, textarea {
   display: none;
 }
 
-/* Safe area padding for mobile bottom nav */
 .pb-safe {
   padding-bottom: max(12px, env(safe-area-inset-bottom));
+}
+
+.card-highlight {
+  background: linear-gradient(135deg, rgba(255,255,255,0.03) 0%, transparent 60%);
+  border-top: 1px solid rgba(255,255,255,0.06);
 }

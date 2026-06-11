@@ -1,45 +1,27 @@
 'use client';
-import { Suspense, useState, useEffect } from 'react';
+import { Suspense, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { ChefHat, Mail, Eye, EyeOff, ArrowRight } from 'lucide-react';
+import { ChefHat, Eye, EyeOff, ArrowRight, Sparkles } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
-import { getAppUrl } from '@/lib/capacitor';
 
 function LoginForm() {
   const router = useRouter();
-  const searchParams = useSearchParams();
+  const params = useSearchParams();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [resendLoading, setResendLoading] = useState(false);
-  const [resendSent, setResendSent] = useState(false);
-  const [needsConfirmation, setNeedsConfirmation] = useState(false);
-
-  useEffect(() => {
-    const urlError = searchParams.get('error');
-    if (urlError === 'confirmation_failed') setError('Email confirmation failed. Please try the link again or request a new one.');
-    else if (urlError === 'auth_failed') setError('Authentication failed. Please try signing in again.');
-  }, [searchParams]);
+  const [error, setError] = useState(params.get('error') ?? '');
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
     setError('');
-    setNeedsConfirmation(false);
     const supabase = createClient();
     const { error: err } = await supabase.auth.signInWithPassword({ email, password });
     if (err) {
-      if (err.message.toLowerCase().includes('email not confirmed')) {
-        setNeedsConfirmation(true);
-        setError("Your email isn't confirmed yet. Check your inbox for the confirmation link.");
-      } else if (err.message.toLowerCase().includes('invalid login')) {
-        setError('Incorrect email or password.');
-      } else {
-        setError(err.message);
-      }
+      setError('Invalid email or password.');
       setLoading(false);
     } else {
       router.push('/home');
@@ -47,107 +29,135 @@ function LoginForm() {
     }
   }
 
-  async function handleResend() {
-    if (!email) { setError('Enter your email address above first.'); return; }
-    setResendLoading(true);
-    const supabase = createClient();
-    await supabase.auth.resend({ type: 'signup', email, options: { emailRedirectTo: `${getAppUrl()}/api/auth/callback` } });
-    setResendLoading(false);
-    setResendSent(true);
-  }
-
   return (
-    <form onSubmit={handleLogin} className="flex flex-col gap-3">
-      <div>
-        <label className="block text-xs font-medium text-[var(--text-dim)] mb-1.5">Email</label>
-        <input
-          type="email"
-          value={email}
-          onChange={e => setEmail(e.target.value)}
-          placeholder="you@example.com"
-          required
-          className="w-full px-4 py-3 rounded-xl text-sm bg-[var(--surface-2)] border border-[var(--border)] text-[var(--text)] placeholder-[var(--text-muted)] outline-none focus:border-[var(--primary)] transition-colors"
-        />
-      </div>
-      <div>
-        <label className="block text-xs font-medium text-[var(--text-dim)] mb-1.5">Password</label>
-        <div className="relative">
-          <input
-            type={showPassword ? 'text' : 'password'}
-            value={password}
-            onChange={e => setPassword(e.target.value)}
-            placeholder="••••••••"
-            required
-            className="w-full px-4 py-3 pr-11 rounded-xl text-sm bg-[var(--surface-2)] border border-[var(--border)] text-[var(--text)] placeholder-[var(--text-muted)] outline-none focus:border-[var(--primary)] transition-colors"
-          />
-          <button
-            type="button"
-            onClick={() => setShowPassword(s => !s)}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--text)] transition-colors"
-          >
-            {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-          </button>
+    <div className="w-full max-w-sm">
+      {/* Logo + title */}
+      <div className="flex flex-col items-center mb-8">
+        <div
+          className="w-16 h-16 rounded-3xl flex items-center justify-center mb-4"
+          style={{
+            background: 'linear-gradient(135deg, #10B981, #06B6D4)',
+            boxShadow: '0 8px 32px rgba(16,185,129,0.45), 0 0 0 1px rgba(16,185,129,0.2)',
+          }}
+        >
+          <ChefHat size={28} className="text-white" />
         </div>
+        <h1 className="text-3xl font-bold text-[var(--text)]">Welcome back</h1>
+        <p className="text-sm mt-1.5" style={{ color: 'var(--text-muted)' }}>Sign in to your Preply account</p>
       </div>
 
-      {error && (
-        <div className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-xl px-3 py-2.5 flex flex-col gap-2">
-          <p>{error}</p>
-          {needsConfirmation && (
-            <button type="button" onClick={handleResend} disabled={resendLoading || resendSent}
-              className="flex items-center gap-1.5 text-xs font-medium text-[var(--primary)] hover:text-[var(--primary-light)] transition-colors disabled:opacity-50">
-              <Mail size={12} />
-              {resendSent ? 'Confirmation email sent!' : resendLoading ? 'Sending…' : 'Resend confirmation email'}
-            </button>
-          )}
-        </div>
-      )}
-
-      <button
-        type="submit"
-        disabled={loading}
-        className="w-full py-3.5 rounded-xl font-semibold text-sm text-white flex items-center justify-center gap-2 transition-all hover:opacity-90 active:scale-[0.98] disabled:opacity-60 mt-1"
-        style={{ background: 'linear-gradient(135deg, #10B981, #059669)', boxShadow: '0 4px 20px rgba(16,185,129,0.25)' }}
+      {/* Card */}
+      <div
+        className="rounded-3xl p-6 mb-5"
+        style={{
+          background: 'var(--surface)',
+          border: '1px solid var(--border-2)',
+          boxShadow: '0 24px 48px rgba(0,0,0,0.4)',
+        }}
       >
-        {loading
-          ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-          : <><span>Sign in</span><ArrowRight size={15} /></>}
-      </button>
-    </form>
+        <form onSubmit={handleLogin} className="flex flex-col gap-4">
+          <div>
+            <label className="block text-xs font-semibold mb-1.5" style={{ color: 'var(--text-dim)' }}>
+              Email address
+            </label>
+            <input
+              type="email"
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              placeholder="you@example.com"
+              required
+              className="w-full px-4 py-3 rounded-2xl text-sm outline-none transition-all"
+              style={{
+                background: 'var(--surface-2)',
+                border: '1px solid var(--border-2)',
+                color: 'var(--text)',
+              }}
+              onFocus={e => { e.currentTarget.style.borderColor = '#10B981'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(16,185,129,0.12)'; }}
+              onBlur={e => { e.currentTarget.style.borderColor = 'var(--border-2)'; e.currentTarget.style.boxShadow = 'none'; }}
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-semibold mb-1.5" style={{ color: 'var(--text-dim)' }}>
+              Password
+            </label>
+            <div className="relative">
+              <input
+                type={showPassword ? 'text' : 'password'}
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                placeholder="Your password"
+                required
+                className="w-full px-4 py-3 pr-11 rounded-2xl text-sm outline-none transition-all"
+                style={{
+                  background: 'var(--surface-2)',
+                  border: '1px solid var(--border-2)',
+                  color: 'var(--text)',
+                }}
+                onFocus={e => { e.currentTarget.style.borderColor = '#10B981'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(16,185,129,0.12)'; }}
+                onBlur={e => { e.currentTarget.style.borderColor = 'var(--border-2)'; e.currentTarget.style.boxShadow = 'none'; }}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(s => !s)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 transition-colors"
+                style={{ color: 'var(--text-muted)' }}
+              >
+                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
+            </div>
+          </div>
+
+          {error && (
+            <div className="flex items-center gap-2 px-3 py-2.5 rounded-2xl text-xs font-medium text-red-400"
+              style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.18)' }}>
+              {error}
+            </div>
+          )}
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full py-3.5 rounded-2xl font-semibold text-sm text-white flex items-center justify-center gap-2 transition-all hover:opacity-90 active:scale-[0.98] disabled:opacity-60 mt-1"
+            style={{
+              background: 'linear-gradient(135deg, #10B981, #06B6D4)',
+              boxShadow: '0 4px 24px rgba(16,185,129,0.35)',
+            }}
+          >
+            {loading
+              ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              : <><span>Sign in</span><ArrowRight size={15} /></>}
+          </button>
+        </form>
+      </div>
+
+      <p className="text-sm text-center" style={{ color: 'var(--text-muted)' }}>
+        Don&apos;t have an account?{' '}
+        <Link href="/signup" className="font-semibold transition-colors" style={{ color: 'var(--primary)' }}>
+          Sign up free
+        </Link>
+      </p>
+
+      {/* Feature hint */}
+      <div className="flex items-center justify-center gap-2 mt-6 text-xs" style={{ color: 'var(--text-muted)' }}>
+        <Sparkles size={12} style={{ color: 'var(--primary)' }} />
+        AI meal planning · Macro tracking · Grocery lists
+      </div>
+    </div>
   );
 }
 
 export default function LoginPage() {
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-5 bg-[var(--bg)]">
-      <div className="fixed inset-0 pointer-events-none">
-        <div style={{ position: 'absolute', top: '-10%', left: '50%', transform: 'translateX(-50%)', width: '500px', height: '300px', background: 'radial-gradient(circle, rgba(16,185,129,0.05) 0%, transparent 70%)' }} />
+    <div className="min-h-screen flex flex-col items-center justify-center p-5" style={{ background: 'var(--bg)' }}>
+      {/* Background blobs */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden" aria-hidden>
+        <div style={{ position: 'absolute', top: '-15%', left: '-10%', width: 600, height: 600, borderRadius: '50%', background: 'radial-gradient(circle, rgba(16,185,129,0.07) 0%, transparent 70%)', filter: 'blur(40px)' }} />
+        <div style={{ position: 'absolute', top: '-5%', right: '-15%', width: 500, height: 500, borderRadius: '50%', background: 'radial-gradient(circle, rgba(6,182,212,0.06) 0%, transparent 70%)', filter: 'blur(40px)' }} />
+        <div style={{ position: 'absolute', bottom: '-10%', left: '30%', width: 500, height: 400, borderRadius: '50%', background: 'radial-gradient(circle, rgba(139,92,246,0.05) 0%, transparent 70%)', filter: 'blur(40px)' }} />
       </div>
-
-      <div className="w-full max-w-sm">
-        <div className="flex flex-col items-center mb-7">
-          <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-3 glow-primary"
-            style={{ background: 'linear-gradient(135deg, #10B981, #059669)' }}>
-            <ChefHat size={26} className="text-white" />
-          </div>
-          <h1 className="text-2xl font-bold text-[var(--text)]">Welcome back</h1>
-          <p className="text-sm text-[var(--text-muted)] mt-1">Sign in to Preply</p>
-        </div>
-
-        <div className="rounded-2xl border border-[var(--border)] p-6 mb-5"
-          style={{ background: 'var(--surface)' }}>
-          <Suspense fallback={<div className="h-40 animate-pulse rounded-xl bg-[var(--surface-2)]" />}>
-            <LoginForm />
-          </Suspense>
-        </div>
-
-        <p className="text-sm text-center text-[var(--text-muted)]">
-          Don&apos;t have an account?{' '}
-          <Link href="/signup" className="text-[var(--primary)] hover:text-[var(--primary-light)] transition-colors font-semibold">
-            Sign up free
-          </Link>
-        </p>
-      </div>
+      <Suspense>
+        <LoginForm />
+      </Suspense>
     </div>
   );
 }
