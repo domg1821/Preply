@@ -1,175 +1,257 @@
 import Link from 'next/link';
-import { ChefHat, CalendarDays, BarChart3, ShoppingCart, Crown, Sparkles, Check, PartyPopper } from 'lucide-react';
+import {
+  ChefHat, CalendarDays, BarChart3, ShoppingCart,
+  Sparkles, Check, PartyPopper, BookOpen, Droplets, ArrowRight,
+} from 'lucide-react';
 
 const features = [
   {
     icon: CalendarDays,
     title: 'Weekly Meal Planner',
-    desc: 'Drag meals onto any day. See your week at a glance and adjust servings instantly.',
+    desc: 'Plan any meal on any day. See your whole week at a glance and adjust servings instantly.',
+    color: '#06B6D4',
   },
   {
     icon: BarChart3,
     title: 'Macro Tracking',
     desc: 'Auto-calculated calories, protein, carbs & fat per meal and per day based on your actual servings.',
+    color: '#EC4899',
   },
   {
     icon: ShoppingCart,
     title: 'Smart Grocery List',
-    desc: 'One click to generate a consolidated grocery list. Link directly to Walmart or Publix cart.',
+    desc: 'One click to generate a consolidated grocery list from your whole week plan.',
+    color: '#F59E0B',
   },
   {
-    icon: ChefHat,
+    icon: BookOpen,
     title: 'Recipe Builder',
     desc: 'Save any recipe with exact ingredient amounts per serving. Scale up or down on the fly.',
+    color: '#8B5CF6',
   },
   {
     icon: PartyPopper,
-    title: 'Event Menu Planner',
+    title: 'Event Menus',
     desc: 'Plan menus for parties or catering. Set guest count and get a perfectly scaled shopping list.',
+    color: '#A855F7',
   },
-];
-
-const premiumFeatures = [
-  'AI meal suggestions personalized to your goals',
-  'AI grocery list auto-sorted by store section',
-  'Month-view calendar for multi-week planning',
-  'Event menu PDF export with course sections & dietary labels',
-  'Share grocery lists with family (no account needed)',
-  'Priority support with same-day response',
+  {
+    icon: Droplets,
+    title: 'Hydration Tracker',
+    desc: 'Track your daily water intake alongside your food to stay on top of your goals.',
+    color: '#06B6D4',
+  },
 ];
 
 export default function LandingPage() {
   return (
     <div className="min-h-screen flex flex-col" style={{ background: 'var(--bg)' }}>
-      {/* Header */}
-      <header className="sticky top-0 z-50 flex items-center justify-between px-6 py-4 border-b border-[var(--border)]"
-        style={{ background: 'rgba(14,17,23,0.85)', backdropFilter: 'blur(12px)' }}>
+
+      {/* ── Header ─────────────────────────────────────────── */}
+      <header
+        className="sticky top-0 z-50 flex items-center justify-between px-6 py-4 border-b"
+        style={{ background: 'rgba(7,9,14,0.85)', backdropFilter: 'blur(16px)', borderColor: 'var(--border)' }}
+      >
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-xl flex items-center justify-center glow-primary"
-            style={{ background: 'linear-gradient(135deg, #10B981, #059669)' }}>
+          <div
+            className="w-9 h-9 rounded-2xl flex items-center justify-center"
+            style={{ background: 'linear-gradient(135deg, #10B981, #06B6D4)', boxShadow: '0 4px 16px rgba(16,185,129,0.35)' }}
+          >
             <ChefHat size={16} className="text-white" />
           </div>
-          <span className="text-lg font-bold tracking-tight gradient-text">Preply</span>
+          <span className="text-lg font-bold gradient-text">Preply</span>
         </div>
         <div className="flex items-center gap-3">
-          <Link href="/login" className="text-sm text-[var(--text-dim)] hover:text-[var(--text)] transition-colors">
+          <Link
+            href="/login"
+            className="text-sm font-medium transition-colors"
+            style={{ color: 'var(--text-dim)' }}
+          >
             Log in
           </Link>
           <Link
             href="/signup"
-            className="text-sm font-semibold px-4 py-2 rounded-xl transition-all active:scale-95"
-            style={{ background: 'linear-gradient(135deg, #10B981, #059669)', color: '#fff' }}
+            className="text-sm font-bold px-4 py-2 rounded-2xl transition-all active:scale-95 text-white"
+            style={{
+              background: 'linear-gradient(135deg, #10B981, #06B6D4)',
+              boxShadow: '0 4px 16px rgba(16,185,129,0.3)',
+            }}
           >
             Get started free
           </Link>
         </div>
       </header>
 
-      {/* Hero */}
-      <div className="relative w-full">
-        {/* Glow orb — sits in a full-width wrapper so it never clips text */}
-        <div className="absolute inset-x-0 top-0 h-80 pointer-events-none overflow-hidden">
-          <div className="absolute left-1/2 top-8 -translate-x-1/2 w-[600px] h-[400px] rounded-full"
-            style={{ background: 'radial-gradient(ellipse, rgba(16,185,129,0.10) 0%, transparent 65%)' }} />
+      {/* ── Hero ───────────────────────────────────────────── */}
+      <div className="relative w-full overflow-hidden">
+        {/* Background blobs */}
+        <div className="absolute inset-0 pointer-events-none">
+          <div style={{ position: 'absolute', top: '-10%', left: '50%', transform: 'translateX(-50%)', width: 700, height: 500, borderRadius: '50%', background: 'radial-gradient(ellipse, rgba(16,185,129,0.08) 0%, transparent 65%)', filter: 'blur(20px)' }} />
+          <div style={{ position: 'absolute', top: 0, right: '-15%', width: 400, height: 400, borderRadius: '50%', background: 'radial-gradient(circle, rgba(6,182,212,0.05) 0%, transparent 70%)', filter: 'blur(30px)' }} />
+          <div style={{ position: 'absolute', bottom: 0, left: '-10%', width: 400, height: 400, borderRadius: '50%', background: 'radial-gradient(circle, rgba(139,92,246,0.05) 0%, transparent 70%)', filter: 'blur(30px)' }} />
         </div>
-        <section className="relative flex flex-col items-center text-center px-6 pt-20 pb-16 gap-6 max-w-3xl mx-auto">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border text-xs font-medium"
-            style={{ background: 'rgba(16,185,129,0.08)', borderColor: 'rgba(16,185,129,0.25)', color: 'var(--primary-light)' }}>
+
+        <section className="relative flex flex-col items-center text-center px-6 pt-24 pb-20 gap-7 max-w-3xl mx-auto">
+          {/* Badge */}
+          <div
+            className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-bold"
+            style={{
+              background: 'rgba(16,185,129,0.1)',
+              border: '1px solid rgba(16,185,129,0.25)',
+              color: 'var(--primary-light)',
+            }}
+          >
             <Sparkles size={11} />
             AI-powered meal planning
           </div>
-          <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold text-[var(--text)]" style={{ lineHeight: '1.15' }}>
+
+          {/* Headline */}
+          <h1
+            className="text-4xl sm:text-5xl md:text-6xl font-bold text-[var(--text)]"
+            style={{ lineHeight: 1.12 }}
+          >
             Prep smarter.{' '}
-            <span className="gradient-text" style={{ paddingBottom: '0.05em', display: 'inline-block' }}>Eat better.</span>
+            <span className="gradient-text" style={{ display: 'inline-block' }}>
+              Eat better.
+            </span>
           </h1>
-          <p className="text-base sm:text-lg text-[var(--text-dim)] max-w-xl leading-relaxed">
+
+          <p className="text-base sm:text-lg max-w-xl leading-relaxed" style={{ color: 'var(--text-dim)' }}>
             Plan your meals, track your macros, and generate your grocery list — all auto-scaled to your exact servings.
           </p>
+
+          {/* CTAs */}
           <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
             <Link
               href="/signup"
-              className="w-full sm:w-auto text-base font-bold px-7 py-3 rounded-xl transition-all active:scale-95 shadow-xl glow-primary text-center"
-              style={{ background: 'linear-gradient(135deg, #10B981, #059669)', color: '#fff' }}
+              className="w-full sm:w-auto flex items-center justify-center gap-2 text-base font-bold px-8 py-3.5 rounded-2xl transition-all active:scale-95 text-white"
+              style={{
+                background: 'linear-gradient(135deg, #10B981, #06B6D4)',
+                boxShadow: '0 6px 28px rgba(16,185,129,0.4)',
+              }}
             >
-              Start for free
+              Start for free <ArrowRight size={16} />
             </Link>
             <Link
               href="/login"
-              className="w-full sm:w-auto text-base text-[var(--text-dim)] hover:text-[var(--text)] px-6 py-3 rounded-xl border border-[var(--border)] hover:border-[var(--border-2)] transition-colors text-center"
+              className="w-full sm:w-auto text-base font-medium px-7 py-3.5 rounded-2xl border transition-all text-center"
+              style={{ color: 'var(--text-dim)', borderColor: 'var(--border-2)' }}
             >
-              Sign in →
+              Sign in
             </Link>
           </div>
-          <div className="flex flex-wrap justify-center items-center gap-x-5 gap-y-2 text-xs text-[var(--text-muted)]">
-            <span className="flex items-center gap-1.5"><Check size={12} className="text-[var(--primary)]" /> Free forever plan</span>
-            <span className="flex items-center gap-1.5"><Check size={12} className="text-[var(--primary)]" /> No credit card</span>
-            <span className="flex items-center gap-1.5"><Check size={12} className="text-[var(--primary)]" /> Cancel anytime</span>
+
+          {/* Trust badges */}
+          <div className="flex flex-wrap justify-center items-center gap-x-6 gap-y-2 text-xs" style={{ color: 'var(--text-muted)' }}>
+            {['Free forever', 'No credit card', 'Available on iOS'].map(t => (
+              <span key={t} className="flex items-center gap-1.5">
+                <Check size={12} style={{ color: 'var(--primary)' }} />{t}
+              </span>
+            ))}
           </div>
         </section>
       </div>
 
-      {/* Features */}
-      <section className="px-6 py-16 max-w-5xl mx-auto w-full">
-        <div className="text-center mb-10">
-          <p className="text-xs font-semibold text-[var(--primary)] uppercase tracking-widest mb-2">Features</p>
-          <h2 className="text-2xl font-bold">Everything you need to meal prep with confidence</h2>
+      {/* ── Features ───────────────────────────────────────── */}
+      <section className="px-6 py-20 max-w-5xl mx-auto w-full">
+        <div className="text-center mb-12">
+          <p className="text-xs font-bold uppercase tracking-widest mb-3" style={{ color: 'var(--primary)' }}>
+            Everything included
+          </p>
+          <h2 className="text-2xl sm:text-3xl font-bold text-[var(--text)]">
+            One app. All your meal prep needs.
+          </h2>
+          <p className="mt-3 text-sm max-w-lg mx-auto" style={{ color: 'var(--text-muted)' }}>
+            Every feature is free — no subscriptions, no paywalls.
+          </p>
         </div>
+
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {features.map(({ icon: Icon, title, desc }) => (
+          {features.map(({ icon: Icon, title, desc, color }) => (
             <div
               key={title}
-              className="group rounded-2xl border p-6 hover:border-[var(--primary)]/30 transition-all duration-200 card-highlight"
-              style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}
+              className="rounded-2xl p-5 transition-all duration-200 hover:scale-[1.02]"
+              style={{
+                background: 'var(--surface)',
+                border: '1px solid var(--border)',
+              }}
             >
-              <div className="w-11 h-11 rounded-xl bg-[var(--primary)]/10 flex items-center justify-center mb-4 group-hover:bg-[var(--primary)]/15 transition-colors">
-                <Icon size={20} className="text-[var(--primary)]" />
+              <div
+                className="w-11 h-11 rounded-2xl flex items-center justify-center mb-4"
+                style={{ background: `${color}18`, border: `1px solid ${color}28` }}
+              >
+                <Icon size={20} style={{ color }} />
               </div>
-              <h3 className="font-semibold text-[var(--text)] mb-2">{title}</h3>
-              <p className="text-sm text-[var(--text-muted)] leading-relaxed">{desc}</p>
+              <h3 className="font-bold text-[var(--text)] mb-1.5">{title}</h3>
+              <p className="text-sm leading-relaxed" style={{ color: 'var(--text-muted)' }}>{desc}</p>
             </div>
           ))}
         </div>
       </section>
 
-      {/* Premium */}
+      {/* ── CTA banner ─────────────────────────────────────── */}
       <section className="px-6 py-16 max-w-5xl mx-auto w-full">
-        <div className="relative rounded-2xl overflow-hidden border border-amber-500/25 p-8 md:p-12"
-          style={{ background: 'linear-gradient(135deg, #1a1f2e 0%, #16202e 60%, #1a1c28 100%)' }}>
-          {/* Background glow */}
-          <div className="absolute top-0 right-0 w-64 h-64 rounded-full pointer-events-none"
-            style={{ background: 'radial-gradient(circle, rgba(245,158,11,0.06) 0%, transparent 70%)' }} />
+        <div
+          className="relative rounded-3xl overflow-hidden p-8 md:p-12 text-center"
+          style={{
+            background: 'linear-gradient(135deg, rgba(16,185,129,0.12), rgba(6,182,212,0.08), rgba(139,92,246,0.08))',
+            border: '1px solid rgba(16,185,129,0.2)',
+          }}
+        >
+          {/* Glow */}
+          <div
+            className="absolute inset-0 pointer-events-none"
+            style={{ background: 'radial-gradient(ellipse 60% 50% at 50% 0%, rgba(16,185,129,0.08) 0%, transparent 100%)' }}
+          />
           <div className="relative">
-            <div className="flex items-center gap-2 mb-4">
-              <Crown size={18} className="text-amber-400" />
-              <span className="text-xs font-bold text-amber-400 uppercase tracking-widest">Premium</span>
+            <div
+              className="w-14 h-14 rounded-3xl flex items-center justify-center mx-auto mb-5"
+              style={{
+                background: 'linear-gradient(135deg, #10B981, #06B6D4)',
+                boxShadow: '0 8px 28px rgba(16,185,129,0.4)',
+              }}
+            >
+              <ChefHat size={24} className="text-white" />
             </div>
-            <h2 className="text-3xl font-bold mb-2">Take your prep to the next level</h2>
-            <p className="text-[var(--text-muted)] mb-8 max-w-lg">
-              Unlock AI-powered meal suggestions, smart grocery sorting, multi-week planning, and more — from $3.50/mo.
+            <h2 className="text-2xl sm:text-3xl font-bold text-[var(--text)] mb-3">
+              Ready to take control of your meals?
+            </h2>
+            <p className="max-w-md mx-auto mb-7 text-sm" style={{ color: 'var(--text-dim)' }}>
+              Join thousands of people who plan smarter with Preply. It&apos;s free, always.
             </p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-8">
-              {premiumFeatures.map((f) => (
-                <div key={f} className="flex items-start gap-2.5 text-sm text-[var(--text-dim)]">
-                  <Check size={14} className="text-amber-400 mt-0.5 shrink-0" />
-                  {f}
-                </div>
-              ))}
-            </div>
             <Link
               href="/signup"
-              className="inline-flex items-center gap-2 font-bold px-6 py-3 rounded-xl transition-all active:scale-95 shadow-lg"
-              style={{ background: 'linear-gradient(135deg, #F59E0B, #D97706)', color: '#000', boxShadow: '0 4px 20px rgba(245,158,11,0.25)' }}
+              className="inline-flex items-center gap-2 text-base font-bold px-8 py-3.5 rounded-2xl text-white transition-all active:scale-95"
+              style={{
+                background: 'linear-gradient(135deg, #10B981, #06B6D4)',
+                boxShadow: '0 6px 28px rgba(16,185,129,0.4)',
+              }}
             >
-              <Crown size={16} />
-              Get Premium — from $3.50/mo
+              Get started — it&apos;s free <ArrowRight size={16} />
             </Link>
           </div>
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="mt-auto border-t border-[var(--border)] px-6 py-6 text-center text-sm text-[var(--text-muted)]">
-        © {new Date().getFullYear()} Preply · Eat with intention.
+      {/* ── Footer ─────────────────────────────────────────── */}
+      <footer
+        className="mt-auto border-t px-6 py-6 text-center text-sm"
+        style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}
+      >
+        <div className="flex items-center justify-center gap-2 mb-3">
+          <div
+            className="w-6 h-6 rounded-lg flex items-center justify-center"
+            style={{ background: 'linear-gradient(135deg, #10B981, #06B6D4)' }}
+          >
+            <ChefHat size={12} className="text-white" />
+          </div>
+          <span className="font-semibold" style={{ color: 'var(--text-dim)' }}>Preply</span>
+        </div>
+        <div className="flex items-center justify-center gap-4 text-xs mb-2">
+          <Link href="/privacy" className="hover:text-[var(--text-dim)] transition-colors">Privacy Policy</Link>
+          <Link href="/terms" className="hover:text-[var(--text-dim)] transition-colors">Terms of Use</Link>
+        </div>
+        <p className="text-xs">© {new Date().getFullYear()} Preply · Eat with intention.</p>
       </footer>
     </div>
   );

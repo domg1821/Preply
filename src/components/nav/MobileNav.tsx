@@ -23,7 +23,7 @@ export function MobileNav() {
 
   return (
     <nav
-      className="md:hidden fixed bottom-0 left-0 right-0 z-40 border-t flex items-center justify-around px-1 pb-safe"
+      className="md:hidden border-t flex items-center justify-around px-1 pb-safe shrink-0"
       style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}
     >
       {navItems.map(({ href, icon: Icon, label, color }) => {

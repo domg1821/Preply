@@ -72,6 +72,8 @@ html {
   height: -webkit-fill-available;
   overflow-x: hidden;
   width: 100%;
+  /* Fill the rubber-band / overscroll area with the app bg on iOS */
+  background-color: var(--bg);
 }
 
 body {

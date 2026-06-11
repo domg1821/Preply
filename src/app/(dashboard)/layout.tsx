@@ -13,12 +13,38 @@ export default async function DashboardLayout({ children }: { children: React.Re
   if (!user) redirect('/login');
 
   return (
-    <div className="flex min-h-screen">
+    /*
+     * Fixed-height container covering the full viewport.
+     * Only the <main> content area scrolls — the Sidebar and MobileNav
+     * are static flex children so they never shift during iOS momentum scroll.
+     */
+    <div
+      style={{
+        position: 'fixed',
+        inset: 0,
+        display: 'flex',
+        overflow: 'hidden',
+      }}
+    >
       <Sidebar />
-      <main className="flex-1 min-w-0 pb-20 md:pb-0">
-        <ErrorBoundary>{children}</ErrorBoundary>
-      </main>
-      <MobileNav />
+
+      {/* Column: scrollable content + bottom nav */}
+      <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0, overflow: 'hidden' }}>
+        <main
+          className="md:pb-0"
+          style={{
+            flex: 1,
+            minWidth: 0,
+            overflowY: 'auto',
+            WebkitOverflowScrolling: 'touch' as React.CSSProperties['WebkitOverflowScrolling'],
+          }}
+        >
+          <ErrorBoundary>{children}</ErrorBoundary>
+        </main>
+
+        {/* MobileNav sits at the bottom of the flex column — no position:fixed needed */}
+        <MobileNav />
+      </div>
     </div>
   );
 }
