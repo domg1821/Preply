@@ -1,4 +1,6 @@
 'use client';
+import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 
 interface Props {
   open: boolean;
@@ -18,10 +20,13 @@ export function ConfirmModal({
   danger = false,
   onConfirm, onCancel,
 }: Props) {
-  if (!open) return null;
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
 
-  return (
-    <div className="fixed inset-0 z-[400] flex items-center justify-center p-4">
+  if (!open || !mounted) return null;
+
+  return createPortal(
+    <div className="fixed inset-0 flex items-center justify-center p-4" style={{ zIndex: 9999 }}>
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onCancel} />
       <div className="relative w-full max-w-xs rounded-2xl overflow-hidden shadow-2xl"
         style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
@@ -48,6 +53,7 @@ export function ConfirmModal({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

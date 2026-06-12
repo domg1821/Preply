@@ -24,6 +24,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
         inset: 0,
         display: 'flex',
         overflow: 'hidden',
+        paddingTop: 'env(safe-area-inset-top)',
+        paddingLeft: 'env(safe-area-inset-left)',
+        paddingRight: 'env(safe-area-inset-right)',
       }}
     >
       <Sidebar />

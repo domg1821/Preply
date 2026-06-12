@@ -3,13 +3,11 @@ import { useState, useEffect, useCallback } from 'react';
 import {
   Plus, Trash2, ChevronRight, ChevronLeft, Users, Calendar, Printer,
   ClipboardCopy, ExternalLink, Minus, BookOpen, Check, PartyPopper,
-  ChefHat, Crown, Download, Tag, UtensilsCrossed, Leaf, Wheat, Nut,
-  Fish, Milk, Lock,
+  ChefHat, Download, Tag, UtensilsCrossed, Leaf, Wheat, Nut,
+  Fish, Milk,
 } from 'lucide-react';
-import { createClient } from '@/lib/supabase/client';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
 import { openUrl, copyToClipboard, isNative } from '@/lib/capacitor';
-import { useIsNative } from '@/lib/useIsNative';
 import { Recipe } from '@/types';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -420,7 +418,6 @@ function exportMenuPDF(event: EventMenu, ingredients: AggregatedIngredient[]) {
 // ─── Component ───────────────────────────────────────────────────────────────
 
 export default function EventsPage() {
-  const native = useIsNative();
   const [events, setEvents] = useState<EventMenu[]>([]);
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -428,8 +425,6 @@ export default function EventsPage() {
   const [showAddRecipe, setShowAddRecipe] = useState(false);
   const [loadingRecipes, setLoadingRecipes] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [isPremium, setIsPremium] = useState(false);
-  const [showProGate, setShowProGate] = useState(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [exportToast, setExportToast] = useState<string | null>(null);
 
@@ -440,15 +435,6 @@ export default function EventsPage() {
   const [newNotes, setNewNotes] = useState('');
 
   useEffect(() => { setEvents(loadEvents()); }, []);
-
-  useEffect(() => {
-    const supabase = createClient();
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (!user) return;
-      supabase.from('profiles').select('is_premium').eq('id', user.id).single()
-        .then(({ data }) => { if (data?.is_premium) setIsPremium(true); });
-    });
-  }, []);
 
   const fetchRecipes = useCallback(async () => {
     if (recipes.length > 0) return;
@@ -579,7 +565,6 @@ export default function EventsPage() {
   function handlePrint() { window.print(); }
 
   async function handleExportPDF() {
-    if (!isPremium) { setShowProGate(true); return; }
     if (!selectedEvent) return;
     if (isNative()) {
       // window.print() / popup is blocked in WKWebView — copy formatted text instead
@@ -618,25 +603,6 @@ export default function EventsPage() {
             </button>
           </div>
 
-          {/* Pro callout for free users — hidden in the iOS app (no external purchase) */}
-          {!isPremium && !native && (
-            <div className="rounded-2xl border border-amber-500/20 p-4 mb-5 flex items-start gap-3 no-print"
-              style={{ background: 'linear-gradient(135deg, rgba(245,158,11,0.06), rgba(245,158,11,0.02))' }}>
-              <div className="w-9 h-9 rounded-xl bg-amber-500/15 flex items-center justify-center shrink-0 mt-0.5">
-                <Crown size={16} className="text-amber-400" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-[var(--text)] mb-0.5">Unlock polished PDF export with Premium</p>
-                <p className="text-xs text-[var(--text-muted)] leading-relaxed">
-                  Create beautiful, print-ready menus with course sections, dietary labels, and guest-scaled shopping lists. Free users can plan menus — Pro users can export them.
-                </p>
-              </div>
-              <a href="/settings"
-                className="shrink-0 text-xs font-bold text-amber-400 hover:text-amber-300 underline underline-offset-2 transition-colors">
-                Upgrade →
-              </a>
-            </div>
-          )}
 
           {/* New Event Form */}
           {showNewForm && (
@@ -929,48 +895,27 @@ export default function EventsPage() {
         {/* Actions */}
         {selectedEvent.recipes.length > 0 && (
           <div className="px-4 md:px-6 no-print space-y-3">
-            {/* Export PDF — Pro feature. On iOS, only show to premium users (no upsell). */}
-            {(isPremium || !native) && (
-            <div className="rounded-2xl border overflow-hidden"
-              style={{ background: 'var(--surface)', borderColor: isPremium ? 'var(--border)' : 'rgba(245,158,11,0.25)' }}>
-              <div className="px-4 py-3 border-b border-[var(--border)] flex items-center justify-between"
-                style={{ background: isPremium ? 'var(--surface-2)' : 'linear-gradient(135deg, rgba(245,158,11,0.06), rgba(245,158,11,0.02))' }}>
+            {/* Export PDF */}
+            <div className="rounded-2xl border border-[var(--border)] overflow-hidden" style={{ background: 'var(--surface)' }}>
+              <div className="px-4 py-3 border-b border-[var(--border)] flex items-center justify-between" style={{ background: 'var(--surface-2)' }}>
                 <div className="flex items-center gap-2">
-                  <Download size={14} className={isPremium ? 'text-[var(--primary)]' : 'text-amber-400'} />
+                  <Download size={14} className="text-[var(--primary)]" />
                   <span className="text-sm font-semibold text-[var(--text)]">Export Polished PDF Menu</span>
-                  {!isPremium && (
-                    <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded-full border border-amber-500/20">
-                      <Crown size={8} /> PRO
-                    </span>
-                  )}
                 </div>
-                {isPremium ? (
-                  <button
-                    onClick={handleExportPDF}
-                    className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg transition-all hover:opacity-90 active:scale-95"
-                    style={{ background: 'var(--primary)', color: '#fff' }}
-                  >
-                    <Download size={11} /> Export PDF
-                  </button>
-                ) : (
-                  <a href="/settings" className="text-xs font-bold text-amber-400 hover:text-amber-300 transition-colors">
-                    Unlock →
-                  </a>
-                )}
+                <button
+                  onClick={handleExportPDF}
+                  className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg transition-all hover:opacity-90 active:scale-95"
+                  style={{ background: 'var(--primary)', color: '#fff' }}
+                >
+                  <Download size={11} /> Export PDF
+                </button>
               </div>
               <div className="px-4 py-3">
-                {isPremium ? (
-                  <p className="text-xs text-[var(--text-muted)]">
-                    Opens a beautifully formatted menu with course sections, dietary labels, and shopping list. Save it as PDF using your browser's print dialog.
-                  </p>
-                ) : (
-                  <p className="text-xs text-[var(--text-muted)]">
-                    Upgrade to Premium to export a beautifully formatted PDF menu with course sections, dietary labels, and a guest-scaled shopping list — ready to print or share.
-                  </p>
-                )}
+                <p className="text-xs text-[var(--text-muted)]">
+                  Opens a beautifully formatted menu with course sections, dietary labels, and shopping list. Save it as PDF using your browser&apos;s print dialog.
+                </p>
               </div>
             </div>
-            )}
 
             {/* Secondary actions */}
             <div className="flex flex-wrap gap-2">
@@ -1024,55 +969,6 @@ export default function EventsPage() {
         </div>
       )}
 
-      {/* Pro Gate Modal */}
-      {showProGate && !native && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowProGate(false)} />
-          <div className="relative w-full max-w-sm rounded-2xl overflow-hidden shadow-2xl"
-            style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
-            <div className="relative px-6 pt-6 pb-5 text-center"
-              style={{ background: 'linear-gradient(135deg, rgba(245,158,11,0.12), rgba(245,158,11,0.04))' }}>
-              <button onClick={() => setShowProGate(false)}
-                className="absolute top-3 right-3 w-7 h-7 rounded-full flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--text)] transition-colors"
-                style={{ background: 'var(--surface-2)' }}>
-                <span className="text-sm leading-none">✕</span>
-              </button>
-              <div className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-3"
-                style={{ background: 'linear-gradient(135deg, #F59E0B, #D97706)' }}>
-                <Crown size={26} className="text-white" />
-              </div>
-              <h2 className="text-lg font-bold text-[var(--text)] mb-1">Polished PDF Export</h2>
-              <p className="text-sm text-[var(--text-muted)]">
-                Export beautiful, print-ready menus with elegant typography, course sections, and dietary labels.
-              </p>
-            </div>
-            <div className="px-6 py-4 space-y-2.5">
-              {[
-                { icon: '📄', text: 'Formatted menu with course sections' },
-                { icon: '🏷️', text: 'Dietary & allergy labels per dish' },
-                { icon: '🛒', text: 'Guest-scaled shopping list included' },
-                { icon: '✨', text: 'Elegant typography ready to print or share' },
-              ].map(({ icon, text }) => (
-                <div key={text} className="flex items-center gap-3">
-                  <span className="text-base shrink-0">{icon}</span>
-                  <p className="text-sm text-[var(--text)]">{text}</p>
-                </div>
-              ))}
-            </div>
-            <div className="px-6 pb-6 flex flex-col gap-2">
-              <a href="/settings"
-                className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-all hover:opacity-90 active:scale-95"
-                style={{ background: 'linear-gradient(135deg, #F59E0B, #D97706)', color: '#000' }}>
-                <Crown size={15} />
-                Unlock Premium — From $3.50/mo
-              </a>
-              <p className="text-center text-[10px] text-[var(--text-muted)]">
-                🛡️ 7-day money-back guarantee · Cancel anytime
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
     </>
   );
 }
