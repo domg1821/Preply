@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ChefHat, Mail, Eye, EyeOff, ArrowRight, Sparkles } from 'lucide-react';
@@ -15,6 +15,12 @@ export default function SignupPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [submitted, setSubmitted] = useState(false);
+
+  useEffect(() => {
+    createClient().auth.getUser().then(({ data: { user } }) => {
+      if (user) router.replace('/home');
+    });
+  }, [router]);
 
   async function handleSignup(e: React.FormEvent) {
     e.preventDefault();

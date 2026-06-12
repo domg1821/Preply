@@ -352,7 +352,9 @@ function GroceryContent() {
   );
   const uncheckedManual = manualItems.filter(i => !i.checked);
   const totalToBuy = uncheckedCombined.length + uncheckedManual.length;
-  const totalChecked = checkedKeys.size + manualItems.filter(i => i.checked).length;
+  const totalChecked = combined.filter(item =>
+    item.sources.every(s => checkedKeys.has(`${s.meal_plan_id}__${s.ingredient_name}`))
+  ).length + manualItems.filter(i => i.checked).length;
   const isEmpty = mealGroups.length === 0 && manualItems.length === 0;
 
   // Estimated cost from combined (non-pantry items that have a cost set)

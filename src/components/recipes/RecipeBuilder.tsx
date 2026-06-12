@@ -61,6 +61,7 @@ export function RecipeBuilder({ onSave, onCancel, saving }: Props) {
   const [prepTime, setPrepTime] = useState('');
   const [cookTime, setCookTime] = useState('');
   const [steps, setSteps] = useState<string[]>(['']);
+  const [nameError, setNameError] = useState(false);
 
   // Search templates whenever the recipe name changes
   useEffect(() => {
@@ -115,7 +116,7 @@ export function RecipeBuilder({ onSave, onCancel, saving }: Props) {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!name.trim()) return;
+    if (!name.trim()) { setNameError(true); return; }
     await onSave({
       name: name.trim(),
       description: description.trim(),
@@ -131,13 +132,16 @@ export function RecipeBuilder({ onSave, onCancel, saving }: Props) {
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-5">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <Input
-          label="Recipe name"
-          placeholder="e.g. Chicken Alfredo"
-          value={name}
-          onChange={(e) => { setName(e.target.value); setAppliedTemplate(null); }}
-          required
-        />
+        <div>
+          <Input
+            label="Recipe name"
+            placeholder="e.g. Chicken Alfredo"
+            value={name}
+            onChange={(e) => { setName(e.target.value); setAppliedTemplate(null); if (nameError) setNameError(false); }}
+            required
+          />
+          {nameError && <p className="text-xs text-red-400 mt-1">Please enter a recipe name.</p>}
+        </div>
         <Input
           label="Default servings"
           type="number"

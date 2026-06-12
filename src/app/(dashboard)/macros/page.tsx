@@ -246,7 +246,7 @@ export default function MacrosPage() {
           <div className="flex items-center justify-between mt-2">
             <span className="text-[10px]" style={{ color: 'var(--text-muted)' }}>Goal: {goals.calories} cal/day</span>
             <span className="text-[10px]" style={{ color: 'var(--text-muted)' }}>
-              Avg: {weekData.length ? Math.round(weekData.reduce((s, d) => s + d.calories, 0) / weekData.filter(d => d.calories > 0).length || 1) : 0} cal
+              Avg: {Math.round(weekData.reduce((s, d) => s + d.calories, 0) / (weekData.filter(d => d.calories > 0).length || 1))} cal
             </span>
           </div>
         )}
