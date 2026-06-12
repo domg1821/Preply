@@ -1,3 +1,5 @@
+import { redirect } from 'next/navigation';
+import { createClient } from '@/lib/supabase/server';
 import Link from 'next/link';
 import {
   ChefHat, CalendarDays, BarChart3, ShoppingCart,
@@ -43,7 +45,10 @@ const features = [
   },
 ];
 
-export default function LandingPage() {
+export default async function LandingPage() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (user) redirect('/home');
   return (
     <div className="min-h-screen flex flex-col" style={{ background: 'var(--bg)' }}>
 

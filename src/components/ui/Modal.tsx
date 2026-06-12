@@ -37,7 +37,7 @@ export function Modal({ open, onClose, title, children, size = 'md' }: ModalProp
       />
       <div
         className={cn(
-          'relative w-full rounded-2xl bg-[var(--surface)] border border-[var(--border)] shadow-2xl animate-in fade-in zoom-in-95 duration-200',
+          'relative w-full rounded-2xl bg-[var(--surface)] border border-[var(--border)] shadow-2xl animate-in fade-in zoom-in-95 duration-200 flex flex-col',
           {
             'max-w-sm': size === 'sm',
             'max-w-lg': size === 'md',
@@ -45,9 +45,10 @@ export function Modal({ open, onClose, title, children, size = 'md' }: ModalProp
             'max-w-4xl': size === 'xl',
           }
         )}
+        style={{ maxHeight: '90dvh' }}
       >
         {title && (
-          <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--border)]">
+          <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--border)] shrink-0">
             <h2 className="text-lg font-semibold text-[var(--text)]">{title}</h2>
             <button
               onClick={onClose}
@@ -57,7 +58,7 @@ export function Modal({ open, onClose, title, children, size = 'md' }: ModalProp
             </button>
           </div>
         )}
-        <div className="p-6">{children}</div>
+        <div className="p-6 overflow-y-auto" style={{ WebkitOverflowScrolling: 'touch' as React.CSSProperties['WebkitOverflowScrolling'] }}>{children}</div>
       </div>
     </div>
   );
